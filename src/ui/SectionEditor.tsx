@@ -3,6 +3,31 @@ import { useSongStore } from '../store/songStore'
 import { Slider } from './controls/Slider'
 import { cn } from '../lib/cn'
 
+type Energy = 'quiet' | 'groove' | 'full'
+
+function inferEnergy(
+  partIds: string[],
+  layers: { quiet: string[]; groove: string[]; full: string[] } | undefined,
+): Energy {
+  if (!layers) return 'groove'
+  const set = new Set(partIds)
+  const score = (bucket: string[]) =>
+    bucket.reduce((n, id) => n + (set.has(id) ? 1 : 0), 0)
+  const q = score(layers.quiet)
+  const g = score(layers.groove)
+  const f = score(layers.full)
+  if (f >= g && f >= q && f > 0) return 'full'
+  if (q >= g && q > 0 && g === 0) return 'quiet'
+  if (q > g) return 'quiet'
+  return 'groove'
+}
+
+const ENERGIES: Array<{ id: Energy; label: string; hint: string }> = [
+  { id: 'quiet', label: 'Quiet', hint: 'Sparse / intro feel' },
+  { id: 'groove', label: 'Groove', hint: 'Main pocket' },
+  { id: 'full', label: 'Full', hint: 'Chorus lift' },
+]
+
 export function SectionEditor() {
   const song = useSongStore((s) => s.song)
   const playMode = useSongStore((s) => s.playMode)
@@ -12,15 +37,18 @@ export function SectionEditor() {
   const playSection = useSongStore((s) => s.playSection)
   const setSectionBars = useSongStore((s) => s.setSectionBars)
   const setSectionName = useSongStore((s) => s.setSectionName)
+  const setSectionEnergy = useSongStore((s) => s.setSectionEnergy)
   const addSection = useSongStore((s) => s.addSection)
   const removeSection = useSongStore((s) => s.removeSection)
-  const toggleSectionPart = useSongStore((s) => s.toggleSectionPart)
 
   const selected =
     song.sections.find((s) => s.id === selectedSectionId) ?? song.sections[0]
-  const progression = selected
-    ? song.progressions.find((p) => p.id === selected.progressionId)
-    : null
+  const energy = selected
+    ? inferEnergy(
+        selected.parts.map((p) => p.partId),
+        song.styleLayers,
+      )
+    : 'groove'
 
   return (
     <section className="space-y-4">
@@ -28,7 +56,7 @@ export function SectionEditor() {
         <div>
           <h2 className="font-display text-lg text-ink">Sections</h2>
           <p className="text-sm text-muted">
-            Add, rename, or delete — then assign parts below.
+            Song form for this style. One section = loop forever.
           </p>
         </div>
         <button
@@ -79,20 +107,12 @@ export function SectionEditor() {
                 onChange={(e) => setSectionName(selected.id, e.target.value)}
                 className="w-full max-w-xs rounded-lg border border-wood/20 bg-cream px-2.5 py-1.5 text-sm font-medium text-ink outline-none focus:border-amber capitalize"
               />
-              <p className="text-xs text-muted">
-                {progression?.name ?? 'No progression'} · {selected.bars} bars
-              </p>
             </div>
             <button
               type="button"
               disabled={song.sections.length <= 1}
               onClick={() => removeSection(selected.id)}
               className="inline-flex items-center gap-1 rounded-full border border-wood/20 px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-red-300 hover:text-red-800 disabled:opacity-40"
-              title={
-                song.sections.length <= 1
-                  ? 'Keep at least one section'
-                  : 'Delete section'
-              }
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete
@@ -110,27 +130,32 @@ export function SectionEditor() {
           />
 
           <div>
-            <p className="mb-2 text-xs font-medium text-muted">Parts in this section</p>
+            <p className="mb-2 text-xs font-medium text-muted">Section energy</p>
             <div className="flex flex-wrap gap-2">
-              {song.parts.map((part) => {
-                const on = selected.parts.some((r) => r.partId === part.id)
-                return (
-                  <button
-                    key={part.id}
-                    type="button"
-                    onClick={() => toggleSectionPart(selected.id, part.id)}
-                    className={cn(
-                      'rounded-full px-3 py-1.5 text-xs border transition',
-                      on
-                        ? 'bg-wood/90 text-cream border-wood'
-                        : 'bg-transparent text-muted border-wood/15 hover:border-wood/40',
-                    )}
-                  >
-                    {part.name}
-                  </button>
-                )
-              })}
+              {ENERGIES.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  disabled={!song.styleLayers}
+                  onClick={() => setSectionEnergy(selected.id, opt.id)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-sm border transition',
+                    energy === opt.id
+                      ? 'bg-wood text-cream border-wood'
+                      : 'bg-cream/70 text-ink-soft border-wood/15 hover:border-wood/40',
+                    !song.styleLayers && 'opacity-40',
+                  )}
+                  title={opt.hint}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
+            {!song.styleLayers ? (
+              <p className="mt-2 text-xs text-muted">
+                Pick a beat style to enable Quiet / Groove / Full.
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}

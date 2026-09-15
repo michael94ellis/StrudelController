@@ -55,6 +55,14 @@ export type GeneratorName =
   | 'shaker'
   | 'ambientGrain'
   | 'chimeHits'
+  | 'houseKit'
+  | 'trapKit'
+  | 'lofiKit'
+  | 'chiptuneKit'
+  | 'houseBass'
+  | 'trapBass'
+  | 'chiptuneArp'
+  | 'lofiKeys'
 
 export type SectionName =
   | 'intro'
@@ -130,6 +138,21 @@ export type Song = {
   parts: Part[]
   sections: Section[]
   arrangement: ArrangementSlot[]
+  /** Active beat style id from the style catalog */
+  styleId?: string
+  /** User-facing variation knobs (0–1) */
+  knobs?: {
+    energy: number
+    density: number
+    groove: number
+    brightness: number
+  }
+  /** Part id buckets for Quiet / Groove / Full section energy */
+  styleLayers?: {
+    quiet: string[]
+    groove: string[]
+    full: string[]
+  }
 }
 
 export type PlayMode = 'loop' | 'song'

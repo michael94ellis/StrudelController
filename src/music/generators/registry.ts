@@ -281,6 +281,176 @@ export const generatorDefs: Record<GeneratorName, GeneratorDef> = {
       return `note("${hits}")`
     },
   },
+
+  /** Classic house: 4-on-floor, clap on 2/4, offbeat hats */
+  houseKit: {
+    name: 'houseKit',
+    label: 'House kit',
+    suits: ['drumkit'],
+    defaultParams: { energy: 0.8 },
+    schema: [{ key: 'energy', type: 'slider', label: 'Energy', min: 0.3, max: 1, step: 0.05 }],
+    generate: (_ctx, params) => {
+      const e = num(params, 'energy', 0.8)
+      const kick = 'bd*4'
+      const clap = e > 0.55 ? '~ cp ~ cp' : '~ cp ~ ~'
+      // Offbeat hats — the house signature
+      const hats =
+        e > 0.75
+          ? '~ hh ~ hh ~ hh ~ hh'
+          : e > 0.45
+            ? '~ hh ~ hh ~ hh ~ ~'
+            : '~ hh ~ ~ ~ hh ~ ~'
+      return `stack(s("${kick}"), s("${clap}"), s("${hats}"))`
+    },
+  },
+
+  /** Trap: half-time snare, syncopated 808 kicks, rolling 16th hats */
+  trapKit: {
+    name: 'trapKit',
+    label: 'Trap kit',
+    suits: ['drumkit'],
+    defaultParams: { energy: 0.8 },
+    schema: [{ key: 'energy', type: 'slider', label: 'Energy', min: 0.3, max: 1, step: 0.05 }],
+    generate: (_ctx, params) => {
+      const e = num(params, 'energy', 0.8)
+      // 16th-feel in one cycle (8 slots ≈ 8th notes; use nested for rolls)
+      const kick =
+        e > 0.7
+          ? 'bd ~ ~ bd ~ ~ bd ~'
+          : e > 0.45
+            ? 'bd ~ ~ ~ ~ ~ bd ~'
+            : 'bd ~ ~ ~ ~ ~ ~ ~'
+      // Snare/clap on beat 3 (half-time)
+      const snare = '~ ~ ~ ~ sd ~ ~ ~'
+      const hats =
+        e > 0.75
+          ? 'hh*16'
+          : e > 0.5
+            ? 'hh hh hh hh hh hh [hh hh] hh hh hh hh hh hh hh hh'
+            : 'hh ~ hh ~ hh ~ hh ~ hh ~ hh ~ hh ~ hh ~'
+      return `stack(s("${kick}"), s("${snare}"), s("${hats}"))`
+    },
+  },
+
+  /** Lo-fi / dusty boom-bap pocket */
+  lofiKit: {
+    name: 'lofiKit',
+    label: 'Lo-fi kit',
+    suits: ['drumkit'],
+    defaultParams: { energy: 0.55 },
+    schema: [{ key: 'energy', type: 'slider', label: 'Energy', min: 0.2, max: 1, step: 0.05 }],
+    generate: (_ctx, params) => {
+      const e = num(params, 'energy', 0.55)
+      // Kick on 1 + "and of 2"; snare on 2 and 4
+      const kick = e > 0.6 ? 'bd ~ ~ bd ~ ~ bd ~' : 'bd ~ ~ ~ bd ~ ~ ~'
+      const snare = '~ sd ~ ~ ~ sd ~ ~'
+      const hats =
+        e > 0.65
+          ? 'hh ~ hh hh ~ hh ~ hh'
+          : e > 0.4
+            ? 'hh ~ hh ~ hh ~ hh ~'
+            : 'hh ~ ~ ~ hh ~ ~ ~'
+      return `stack(s("${kick}"), s("${snare}"), s("${hats}"))`
+    },
+  },
+
+  /** Bright adventure / RPG town drums */
+  chiptuneKit: {
+    name: 'chiptuneKit',
+    label: 'Chiptune kit',
+    suits: ['drumkit'],
+    defaultParams: { energy: 0.55 },
+    schema: [{ key: 'energy', type: 'slider', label: 'Energy', min: 0.2, max: 1, step: 0.05 }],
+    generate: (_ctx, params) => {
+      const e = num(params, 'energy', 0.55)
+      const kick = e > 0.65 ? 'bd ~ bd ~ bd ~ bd ~' : 'bd ~ ~ ~ bd ~ ~ ~'
+      const snare = '~ ~ sd ~ ~ ~ sd ~'
+      const hats = e > 0.6 ? 'hh*8' : 'hh ~ hh ~ hh ~ hh ~'
+      return `stack(s("${kick}"), s("${snare}"), s("${hats}"))`
+    },
+  },
+
+  /** Classic house offbeat / pump bass */
+  houseBass: {
+    name: 'houseBass',
+    label: 'House bass',
+    suits: ['subBass'],
+    defaultParams: { octave: 2 },
+    schema: [{ key: 'octave', type: 'slider', label: 'Octave', min: 1, max: 3, step: 1 }],
+    generate: (ctx, params) => {
+      const oct = num(params, 'octave', 2)
+      // Per bar: root on offbeats (house pump) — x on & of each beat feel
+      const line = ctx.roots
+        .map((r) => {
+          const n = r.replace(/\d+$/, String(oct))
+          return `${n} ${n} ${n} ${n}`
+        })
+        .join(' ')
+      return `note("${line}").struct("~ x ~ x ~ x ~ x")`
+    },
+  },
+
+  /** Trap 808: long roots with syncopated punches + octave jumps */
+  trapBass: {
+    name: 'trapBass',
+    label: 'Trap 808',
+    suits: ['subBass'],
+    defaultParams: { octave: 1 },
+    schema: [{ key: 'octave', type: 'slider', label: 'Octave', min: 1, max: 2, step: 1 }],
+    generate: (ctx, params) => {
+      const oct = num(params, 'octave', 1)
+      const line = ctx.roots
+        .map((r) => {
+          const n = r.replace(/\d+$/, String(oct))
+          const up = r.replace(/\d+$/, String(oct + 1))
+          // Hold-ish with late punch and octave flick
+          return `${n} ~ ~ ${n} ~ ${up} ${n} ~`
+        })
+        .join(' ')
+      return `note("${line}")`
+    },
+  },
+
+  /** Video-game style arp: 1–5–8–5 loop (idiomatic, not a specific tune) */
+  chiptuneArp: {
+    name: 'chiptuneArp',
+    label: 'Chiptune arp',
+    suits: ['pluck', 'lead', 'bell', 'piano'],
+    defaultParams: { octave: 4 },
+    schema: [{ key: 'octave', type: 'slider', label: 'Octave', min: 3, max: 6, step: 1 }],
+    generate: (ctx, params) => {
+      const oct = num(params, 'octave', 4)
+      const seq = ctx.triads
+        .map((t) => {
+          const r = t[0].replace(/\d+$/, String(oct))
+          const fifth = t[2].replace(/\d+$/, String(oct))
+          const top = t[0].replace(/\d+$/, String(oct + 1))
+          return `${r} ${fifth} ${top} ${fifth} ${r} ${fifth} ${top} ${fifth}`
+        })
+        .join(' ')
+      return `note("${seq}")`
+    },
+  },
+
+  /** Soft lo-fi piano: sustained sevenths + sparse top */
+  lofiKeys: {
+    name: 'lofiKeys',
+    label: 'Lo-fi keys',
+    suits: ['piano', 'pad', 'pluck'],
+    defaultParams: { octave: 3 },
+    schema: [{ key: 'octave', type: 'slider', label: 'Octave', min: 2, max: 5, step: 1 }],
+    generate: (ctx, params) => {
+      const oct = num(params, 'octave', 3)
+      const stacks = ctx.sevenths
+        .map((t) => {
+          const notes = t.map((n) => n.replace(/\d+$/, (m) => String(Number(m) - 4 + oct)))
+          return `[${notes.join(',')}]`
+        })
+        .join(' ')
+      // Long holds with a late ghost stab
+      return `note("<${stacks}>").struct("x ~ ~ ~ ~ x ~ ~")`
+    },
+  },
 }
 
 export function generatePart(name: GeneratorName, ctx: HarmonyCtx, params: ParamMap): string {

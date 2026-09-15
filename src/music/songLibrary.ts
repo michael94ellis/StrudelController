@@ -1,8 +1,9 @@
 import type { Song } from './types'
-import { cloneSong, songPresets } from './presets'
+import { buildStyle, applyKnobsToSong } from './styles/build'
+import { DEFAULT_KNOBS } from './styles/types'
 
 const STORAGE_KEY = 'beat-studio:library'
-const STORAGE_VERSION = 1
+const STORAGE_VERSION = 4
 
 export type SongLibraryBlob = {
   version: number
@@ -11,11 +12,12 @@ export type SongLibraryBlob = {
 }
 
 function seedLibrary(): SongLibraryBlob {
-  const songs = songPresets.map((p) => cloneSong(p))
+  const built = buildStyle('house', 'My beat')
+  const song = applyKnobsToSong(built.song, DEFAULT_KNOBS)
   return {
     version: STORAGE_VERSION,
-    activeSongId: songs[0]?.id ?? '',
-    songs,
+    activeSongId: song.id,
+    songs: [song],
   }
 }
 

@@ -1,38 +1,41 @@
 import { create } from 'zustand'
-import type {
-  GeneratorName,
-  InstrumentKind,
-  ParamValue,
-  PlayMode,
-  Song,
-} from '../music/types'
-import { newId } from '../music/types'
+import type { PlayMode, Song } from '../music/types'
 import { compileLoop, compileSong } from '../music/compile'
-import { cloneSong } from '../music/presets'
 import {
   loadLibrary,
   saveLibrary,
   uniqueSongTitle,
 } from '../music/songLibrary'
-import { instrumentDefs } from '../music/instruments/registry'
-import { generatorDefs } from '../music/generators/registry'
+import {
+  applyKnobsToSong,
+  buildStyle,
+  setSongSectionEnergy,
+} from '../music/styles/build'
+import type { SongKnobs } from '../music/styles/types'
+import { DEFAULT_KNOBS } from '../music/styles/types'
+import { getStyle } from '../music/styles/catalog'
 import { isPlaying, playCode, stopCode, updateCode, getSession } from '../audio/strudelEngine'
+
+type SectionEnergy = 'quiet' | 'groove' | 'full'
 
 type SongState = {
   songs: Song[]
   song: Song
+  /** Pre-knob snapshot for the active style (avoids compounding knob math) */
+  styleBase: Song | null
   playMode: PlayMode
   loopSectionId: string | null
   playing: boolean
   error: string | null
-  selectedInstrumentId: string | null
-  selectedPartId: string | null
   selectedSectionId: string | null
 
   selectSong: (id: string) => void
   addSong: () => void
   renameSong: (title: string) => void
   deleteSong: (id?: string) => void
+  applyStyle: (styleId: string) => void
+  setKnob: (key: keyof SongKnobs, value: number) => void
+  setSectionEnergy: (sectionId: string, energy: SectionEnergy) => void
   setPlayMode: (mode: PlayMode) => void
   setLoopSection: (id: string) => void
   playSection: (id: string) => void
@@ -40,40 +43,34 @@ type SongState = {
   setBpm: (bpm: number) => void
   setKey: (key: string) => void
   setScale: (scale: string) => void
-  setSwing: (swing: number) => void
-
-  selectInstrument: (id: string | null) => void
-  selectPart: (id: string | null) => void
   selectSection: (id: string | null) => void
-
-  setInstrumentParam: (id: string, key: string, value: ParamValue) => void
-  setPartParam: (id: string, key: string, value: ParamValue) => void
-  togglePart: (id: string) => void
-  addInstrument: (kind: InstrumentKind) => void
-  addPart: (instrumentId: string, generator: GeneratorName) => void
-  removeInstrument: (id: string) => void
-  removePart: (id: string) => void
   setSectionBars: (id: string, bars: number) => void
   setSectionName: (id: string, name: string) => void
   addSection: (name?: string) => void
   removeSection: (id: string) => void
   addArrangementSlot: (sectionId: string) => void
   removeArrangementSlot: (index: number) => void
-  toggleSectionPart: (sectionId: string, partId: string) => void
-
   play: () => Promise<void>
   stop: () => void
   refreshIfPlaying: () => Promise<void>
-  compiledCode: () => string
 }
 
 function selectionFor(song: Song) {
   return {
-    loopSectionId: song.sections.find((s) => s.name.includes('verse'))?.id ?? song.sections[0]?.id ?? null,
-    selectedInstrumentId: song.instruments[0]?.id ?? null,
-    selectedPartId: song.parts[0]?.id ?? null,
+    loopSectionId:
+      song.sections.find((s) => s.name.includes('verse'))?.id ??
+      song.sections[0]?.id ??
+      null,
     selectedSectionId: song.sections[0]?.id ?? null,
   }
+}
+
+function snapshotFromStyle(song: Song): Song | null {
+  if (!song.styleId) return null
+  const built = buildStyle(song.styleId, song.title)
+  built.song.id = song.id
+  built.song.title = song.title
+  return built.song
 }
 
 const loaded = loadLibrary()
@@ -104,11 +101,9 @@ function compileCurrent(s: SongState): string {
 }
 
 async function reevaluateLive(get: () => SongState) {
-  const code = compileCurrent(get())
-  await updateCode(code)
+  await updateCode(compileCurrent(get()))
 }
 
-/** Update the active song and mirror it into the library list, then persist. */
 function patchSong(
   set: (partial: Partial<SongState> | ((s: SongState) => Partial<SongState>)) => void,
   get: () => SongState,
@@ -126,6 +121,7 @@ function patchSong(
 export const useSongStore = create<SongState>((set, get) => ({
   songs: loaded.songs,
   song: initialSong,
+  styleBase: snapshotFromStyle(initialSong),
   playMode: 'loop',
   playing: false,
   error: null,
@@ -137,40 +133,34 @@ export const useSongStore = create<SongState>((set, get) => ({
     clearRefreshTimer()
     set({
       song: next,
+      styleBase: snapshotFromStyle(next),
       error: null,
       ...selectionFor(next),
     })
     queuePersist(get)
-    if (get().playing || isPlaying()) {
-      void get().play()
-    }
+    if (get().playing || isPlaying()) void get().play()
   },
 
   addSong: () => {
     const s = get()
-    const base = cloneSong(s.song)
-    const title = uniqueSongTitle('Untitled song', s.songs)
-    const next: Song = {
-      ...base,
-      id: newId('song'),
-      title,
-    }
-    // Fresh ids so edits don't collide with the template song's internal refs
-    // cloneSong already deep-clones; regenerating top-level song id is enough
-    // since instruments/parts/sections keep their own ids within this song.
+    const styleId = s.song.styleId ?? 'house'
+    const title = uniqueSongTitle('Untitled beat', s.songs)
+    const built = buildStyle(styleId, title)
+    const song = applyKnobsToSong(built.song, s.song.knobs ?? DEFAULT_KNOBS)
     clearRefreshTimer()
     set({
-      songs: [...s.songs, next],
-      song: next,
+      songs: [...s.songs, song],
+      song,
+      styleBase: built.song,
       error: null,
       playMode: 'loop',
-      ...selectionFor(next),
+      ...selectionFor(song),
     })
     queuePersist(get)
   },
 
   renameSong: (title) => {
-    const trimmed = title.trim() || 'Untitled song'
+    const trimmed = title.trim() || 'Untitled beat'
     patchSong(set, get, (song) => ({ ...song, title: trimmed }))
   },
 
@@ -185,26 +175,89 @@ export const useSongStore = create<SongState>((set, get) => ({
     set({
       songs,
       song: next,
+      styleBase: switching ? snapshotFromStyle(next) : s.styleBase,
       error: null,
       ...(switching ? selectionFor(next) : {}),
     })
     queuePersist(get)
-    if (switching && (get().playing || isPlaying())) {
-      void get().play()
+    if (switching && (get().playing || isPlaying())) void get().play()
+  },
+
+  applyStyle: (styleId) => {
+    const s = get()
+    const entry = getStyle(styleId)
+    const title = s.song.title || entry?.label || 'Beat'
+    const knobs = s.song.knobs ?? DEFAULT_KNOBS
+    const built = buildStyle(styleId, title)
+    built.song.id = s.song.id
+    const song = applyKnobsToSong(built.song, knobs)
+    clearRefreshTimer()
+    set({
+      song,
+      styleBase: built.song,
+      songs: s.songs.map((x) => (x.id === song.id ? song : x)),
+      error: null,
+      ...selectionFor(song),
+    })
+    queuePersist(get)
+    if (get().playing || isPlaying()) void get().play()
+    else void get().play()
+  },
+
+  setKnob: (key, value) => {
+    const s = get()
+    const knobs = { ...(s.song.knobs ?? DEFAULT_KNOBS), [key]: value }
+    const base = s.styleBase ?? snapshotFromStyle(s.song)
+    if (!base) {
+      patchSong(set, get, (song) => ({
+        ...song,
+        knobs,
+        globals:
+          key === 'groove'
+            ? { ...song.globals, swing: 0.05 + value * 0.2 }
+            : song.globals,
+      }))
+      void get().refreshIfPlaying()
+      return
     }
+    const next = applyKnobsToSong(
+      {
+        ...base,
+        id: s.song.id,
+        title: s.song.title,
+        sections: s.song.sections,
+        arrangement: s.song.arrangement,
+        styleLayers: s.song.styleLayers ?? base.styleLayers,
+      },
+      knobs,
+    )
+    // Re-apply current section part lists (energy) onto knob-adjusted song
+    next.sections = s.song.sections.map((sec) => {
+      const fresh = next.sections.find((x) => x.name === sec.name)
+      return fresh
+        ? { ...fresh, parts: sec.parts, bars: sec.bars, mods: sec.mods }
+        : sec
+    })
+    set({
+      song: next,
+      songs: s.songs.map((x) => (x.id === next.id ? next : x)),
+    })
+    queuePersist(get)
+    void get().refreshIfPlaying()
+  },
+
+  setSectionEnergy: (sectionId, energy) => {
+    patchSong(set, get, (song) => setSongSectionEnergy(song, sectionId, energy))
+    void get().refreshIfPlaying()
   },
 
   setPlayMode: (mode) => {
     set({ playMode: mode })
-    if (get().playing || isPlaying()) {
-      void get().play()
-    }
+    if (get().playing || isPlaying()) void get().play()
   },
   setLoopSection: (id) => {
     set({ loopSectionId: id, playMode: 'loop', selectedSectionId: id })
-    if (get().playing || isPlaying()) {
-      void get().play()
-    }
+    if (get().playing || isPlaying()) void get().play()
   },
   playSection: (id) => {
     clearRefreshTimer()
@@ -245,117 +298,8 @@ export const useSongStore = create<SongState>((set, get) => ({
     }))
     void get().refreshIfPlaying()
   },
-  setSwing: (swing) => {
-    patchSong(set, get, (song) => ({
-      ...song,
-      globals: { ...song.globals, swing },
-    }))
-    void get().refreshIfPlaying()
-  },
 
-  selectInstrument: (id) => set({ selectedInstrumentId: id }),
-  selectPart: (id) => set({ selectedPartId: id }),
   selectSection: (id) => set({ selectedSectionId: id }),
-
-  setInstrumentParam: (id, key, value) => {
-    patchSong(set, get, (song) => ({
-      ...song,
-      instruments: song.instruments.map((i) =>
-        i.id === id ? { ...i, params: { ...i.params, [key]: value } } : i,
-      ),
-    }))
-    void get().refreshIfPlaying()
-  },
-  setPartParam: (id, key, value) => {
-    patchSong(set, get, (song) => ({
-      ...song,
-      parts: song.parts.map((p) =>
-        p.id === id ? { ...p, params: { ...p.params, [key]: value } } : p,
-      ),
-    }))
-    void get().refreshIfPlaying()
-  },
-  togglePart: (id) => {
-    patchSong(set, get, (song) => ({
-      ...song,
-      parts: song.parts.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)),
-    }))
-    void get().refreshIfPlaying()
-  },
-  addInstrument: (kind) => {
-    const def = instrumentDefs[kind]
-    const instrument = {
-      id: newId('inst'),
-      name: def.label,
-      kind,
-      params: { ...def.defaultParams },
-    }
-    patchSong(
-      set,
-      get,
-      (song) => ({ ...song, instruments: [...song.instruments, instrument] }),
-      { selectedInstrumentId: instrument.id },
-    )
-  },
-  addPart: (instrumentId, generator) => {
-    const def = generatorDefs[generator]
-    const p = {
-      id: newId('part'),
-      name: def.label,
-      instrumentId,
-      generator,
-      params: { ...def.defaultParams },
-      enabled: true,
-    }
-    patchSong(
-      set,
-      get,
-      (song) => ({ ...song, parts: [...song.parts, p] }),
-      { selectedPartId: p.id },
-    )
-    void get().refreshIfPlaying()
-  },
-  removeInstrument: (id) => {
-    patchSong(
-      set,
-      get,
-      (song) => ({
-        ...song,
-        instruments: song.instruments.filter((i) => i.id !== id),
-        parts: song.parts.filter((p) => p.instrumentId !== id),
-        sections: song.sections.map((sec) => ({
-          ...sec,
-          parts: sec.parts.filter((ref) => {
-            const part = song.parts.find((p) => p.id === ref.partId)
-            return part && part.instrumentId !== id
-          }),
-        })),
-      }),
-      {
-        selectedInstrumentId:
-          get().selectedInstrumentId === id ? null : get().selectedInstrumentId,
-      },
-    )
-    void get().refreshIfPlaying()
-  },
-  removePart: (id) => {
-    patchSong(
-      set,
-      get,
-      (song) => ({
-        ...song,
-        parts: song.parts.filter((p) => p.id !== id),
-        sections: song.sections.map((sec) => ({
-          ...sec,
-          parts: sec.parts.filter((ref) => ref.partId !== id),
-        })),
-      }),
-      {
-        selectedPartId: get().selectedPartId === id ? null : get().selectedPartId,
-      },
-    )
-    void get().refreshIfPlaying()
-  },
   setSectionBars: (id, bars) => {
     patchSong(set, get, (song) => ({
       ...song,
@@ -379,12 +323,6 @@ export const useSongStore = create<SongState>((set, get) => ({
     const template =
       s.song.sections.find((sec) => sec.id === s.selectedSectionId) ??
       s.song.sections[0]
-    const progressionId =
-      template?.progressionId ?? s.song.progressions[0]?.id ?? ''
-    const partRefs = template
-      ? template.parts.map((p) => ({ ...p }))
-      : s.song.parts.slice(0, 3).map((p) => ({ partId: p.id }))
-
     const existingNames = new Set(s.song.sections.map((sec) => sec.name))
     let label = name?.trim() || 'verse'
     if (existingNames.has(label)) {
@@ -392,15 +330,19 @@ export const useSongStore = create<SongState>((set, get) => ({
       while (existingNames.has(`${label} ${n}`)) n += 1
       label = `${label} ${n}`
     }
-
+    const layers = s.song.styleLayers
+    const energyParts =
+      layers?.groove?.map((partId) => ({ partId })) ??
+      template?.parts.map((p) => ({ ...p })) ??
+      []
     const section = {
-      id: newId('sec'),
+      id: `sec-${Date.now()}`,
       name: label,
       bars: template?.bars ?? 8,
-      progressionId,
-      parts: partRefs,
+      progressionId:
+        template?.progressionId ?? s.song.progressions[0]?.id ?? '',
+      parts: energyParts,
     }
-
     patchSong(
       set,
       get,
@@ -420,17 +362,16 @@ export const useSongStore = create<SongState>((set, get) => ({
   removeSection: (id) => {
     const s = get()
     if (s.song.sections.length <= 1) return
-
     const sections = s.song.sections.filter((sec) => sec.id !== id)
     const arrangement = s.song.arrangement.filter((slot) => slot.sectionId !== id)
     const fallback = sections[0]?.id ?? null
-
     patchSong(
       set,
       get,
       (song) => ({ ...song, sections, arrangement }),
       {
-        selectedSectionId: s.selectedSectionId === id ? fallback : s.selectedSectionId,
+        selectedSectionId:
+          s.selectedSectionId === id ? fallback : s.selectedSectionId,
         loopSectionId: s.loopSectionId === id ? fallback : s.loopSectionId,
       },
     )
@@ -454,29 +395,12 @@ export const useSongStore = create<SongState>((set, get) => ({
       void get().play()
     }
   },
-  toggleSectionPart: (sectionId, partId) => {
-    patchSong(set, get, (song) => ({
-      ...song,
-      sections: song.sections.map((sec) => {
-        if (sec.id !== sectionId) return sec
-        const has = sec.parts.some((r) => r.partId === partId)
-        return {
-          ...sec,
-          parts: has
-            ? sec.parts.filter((r) => r.partId !== partId)
-            : [...sec.parts, { partId }],
-        }
-      }),
-    }))
-    void get().refreshIfPlaying()
-  },
 
   play: async () => {
     clearRefreshTimer()
     set({ error: null })
     try {
-      const code = compileCurrent(get())
-      await playCode(code)
+      await playCode(compileCurrent(get()))
       if (!isPlaying()) {
         set({ playing: false })
         return
@@ -509,5 +433,4 @@ export const useSongStore = create<SongState>((set, get) => ({
       }
     }, 100)
   },
-  compiledCode: () => compileCurrent(get()),
 }))

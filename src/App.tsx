@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { Transport } from './ui/Transport'
 import { GlobalPanel } from './ui/GlobalPanel'
-import { InstrumentRack } from './ui/InstrumentRack'
-import { PartRack } from './ui/PartRack'
+import { StyleBrowser } from './ui/StyleBrowser'
+import { VibeKnobs } from './ui/VibeKnobs'
 import { SectionEditor } from './ui/SectionEditor'
 import { ArrangementTimeline } from './ui/ArrangementTimeline'
 import { useSongStore } from './store/songStore'
@@ -24,8 +24,7 @@ export default function App() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-wood">Strudel</p>
         <h1 className="font-display text-4xl sm:text-5xl text-ink mt-1">Beat Studio</h1>
         <p className="mt-2 max-w-xl text-base text-ink-soft">
-          Build songs from instruments, parts, and sections — intro through outro — powered by
-          Strudel.
+          Start from popular beat styles, then shape energy, density, and song form.
         </p>
       </header>
 
@@ -35,10 +34,10 @@ export default function App() {
 
       <div className="space-y-10">
         <GlobalPanel />
+        <StyleBrowser />
+        <VibeKnobs />
         <ArrangementTimeline />
         <SectionEditor />
-        <InstrumentRack />
-        <PartRack />
 
         <details className="rounded-2xl border border-wood/15 bg-cream/40 px-4 py-3">
           <summary className="cursor-pointer text-sm font-medium text-ink-soft">
