@@ -108,7 +108,8 @@ export async function playCode(code: string): Promise<void> {
 }
 
 /**
- * Hot-swap pattern without resetting the clock (live param tweaks).
+ * Hot-swap pattern without resetting the clock (live param / section tweaks).
+ * Keeps delay/reverb buses alive so transitions don't click.
  */
 export async function updateCode(code: string): Promise<void> {
   if (!playing) return

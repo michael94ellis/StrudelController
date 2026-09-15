@@ -11,16 +11,22 @@ import { resolveHarmony } from './theory'
 import { renderInstrument } from './instruments/registry'
 import { generatePart } from './generators/registry'
 
-function applyMods(expr: string, mods: SectionMod[] | undefined): string {
+function applyMods(
+  expr: string,
+  mods: SectionMod[] | undefined,
+  bars = 4,
+): string {
   if (!mods?.length) return expr
   let out = expr
+  const fadeSpan = Math.max(2, bars)
   for (const mod of mods) {
     switch (mod.type) {
       case 'fadeIn':
-        out = `${out}.gain(sine.range(0.15, 1).slow(4))`
+        // saw = one-shot ramp (sine oscillates and sounds choppy)
+        out = `${out}.gain(saw.range(0.05, 1).slow(${fadeSpan}))`
         break
       case 'fadeOut':
-        out = `${out}.gain(sine.range(1, 0.1).slow(4))`
+        out = `${out}.gain(saw.range(1, 0.02).slow(${fadeSpan}))`
         break
       case 'gain':
         out = `${out}.gain(${mod.value.toFixed(2)})`
@@ -29,11 +35,23 @@ function applyMods(expr: string, mods: SectionMod[] | undefined): string {
         out = `${out}.slow(2)`
         break
       case 'filterSweep':
-        out = `${out}.lpf(sine.range(${mod.from}, ${mod.to}).slow(8))`
+        out = `${out}.lpf(sine.range(${mod.from}, ${mod.to}).slow(${fadeSpan}))`
         break
     }
   }
   return out
+}
+
+/** Soften hard cuts between arrange() sections. */
+function withEdgeFade(body: string, bars: number): string {
+  if (bars <= 1) return `${body}.gain(saw.range(0.55, 1).slow(1))`
+  if (bars === 2) return `${body}.gain("<0.55 0.95>".slow(2))`
+  const hold = bars - 2
+  return `${body}.gain("<0.4 1!${hold} 0.45>".slow(${bars}))`
+}
+
+function hasExplicitFade(mods: SectionMod[] | undefined): boolean {
+  return !!mods?.some((m) => m.type === 'fadeIn' || m.type === 'fadeOut')
 }
 
 function compilePart(
@@ -70,7 +88,7 @@ function compileSectionBody(song: Song, section: Section): string {
   if (!parts.length) return `silence`
 
   let body = parts.length === 1 ? parts[0] : `stack(\n  ${parts.join(',\n  ')}\n)`
-  body = applyMods(body, section.mods)
+  body = applyMods(body, section.mods, section.bars)
   return body
 }
 
@@ -120,6 +138,10 @@ export function compileSong(song: Song, arrangement?: ArrangementSlot[]): string
     let body = compileSectionBody(song, section)
     if (swing > 0.02) {
       body = `${body}.swing(${swing.toFixed(2)})`
+    }
+    // Soften hard arrange() cuts unless the section already has its own fade
+    if (!hasExplicitFade(section.mods)) {
+      body = withEdgeFade(body, totalBars)
     }
     // arrange expects [cycles, pattern]; one harmonic cycle ≈ bars of progression length
     // Use section.bars as cycles so a 4-bar section plays 4 cycles of the 4-chord progression

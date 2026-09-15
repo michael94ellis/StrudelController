@@ -51,6 +51,8 @@ type SongState = {
   addArrangementSlot: (sectionId: string) => void
   removeArrangementSlot: (index: number) => void
   play: () => Promise<void>
+  /** Hot-swap if already playing; otherwise start. Avoids hush clicks. */
+  audition: () => Promise<void>
   stop: () => void
   refreshIfPlaying: () => Promise<void>
 }
@@ -248,24 +250,25 @@ export const useSongStore = create<SongState>((set, get) => ({
 
   setSectionEnergy: (sectionId, energy) => {
     patchSong(set, get, (song) => setSongSectionEnergy(song, sectionId, energy))
-    // Keep loop focused on the section being edited and restart so Quiet /
-    // Groove / Full always audibly switches (live refresh can miss layer swaps).
     set({ loopSectionId: sectionId, playMode: 'loop', selectedSectionId: sectionId })
-    void get().play()
+    // Hot-swap when already playing — hard restart (hush) is what made energy
+    // / section changes feel choppy.
+    void get().audition()
   },
 
   setPlayMode: (mode) => {
     set({ playMode: mode })
+    // Mode change needs a clean restart so arrange() starts at bar 1
     if (get().playing || isPlaying()) void get().play()
   },
   setLoopSection: (id) => {
     set({ loopSectionId: id, playMode: 'loop', selectedSectionId: id })
-    if (get().playing || isPlaying()) void get().play()
+    void get().audition()
   },
   playSection: (id) => {
     clearRefreshTimer()
     set({ loopSectionId: id, playMode: 'loop', selectedSectionId: id })
-    void get().play()
+    void get().audition()
   },
   reorderArrangement: (fromIndex, toIndex) => {
     if (fromIndex === toIndex) return
@@ -413,6 +416,21 @@ export const useSongStore = create<SongState>((set, get) => ({
       const message = err instanceof Error ? err.message : String(err)
       set({ error: message, playing: false })
     }
+  },
+  audition: async () => {
+    clearRefreshTimer()
+    if (get().playing || isPlaying()) {
+      set({ error: null })
+      try {
+        await updateCode(compileCurrent(get()))
+        set({ playing: true, error: null })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        set({ error: message })
+      }
+      return
+    }
+    await get().play()
   },
   stop: () => {
     clearRefreshTimer()
