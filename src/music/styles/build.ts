@@ -131,7 +131,7 @@ function buildFromRecipe(recipe: StyleRecipe, title?: string): BuiltStyle {
 }
 
 function kit(
-  entryId: string,
+  _entryId: string,
   drums: Partial<InstSpec['params']>,
   bass: Partial<InstSpec['params']>,
   keys: Partial<InstSpec['params']> & { kind?: InstSpec['kind'] },

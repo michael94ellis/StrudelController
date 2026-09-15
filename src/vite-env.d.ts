@@ -15,4 +15,8 @@ declare module '@strudel/web' {
     baseUrl?: string,
     options?: Record<string, unknown>,
   ): Promise<unknown>
+
+  export function getAudioContext(): AudioContext
+
+  export function resetGlobalEffects(): void
 }
