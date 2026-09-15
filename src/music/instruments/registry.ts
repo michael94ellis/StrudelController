@@ -37,7 +37,7 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
     render: (expr, params) => {
       const crunch = num(params, 'crunch', 0)
       const bank = str(params, 'bank', 'RolandTR909')
-      return `${expr}.bank("${bank}")${gainLine(params, 'gain', 0.72)}${
+      return `${expr}.bank("${bank}")${gainLine(params, 'gain', 0.72)}.room(0.12).clip(1)${
         crunch > 0.01 ? `.distort(${crunch.toFixed(2)})` : ''
       }`
     },
@@ -46,7 +46,7 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
   subBass: {
     kind: 'subBass',
     label: 'Sub bass',
-    defaultParams: { wave: 'sawtooth', cutoff: 480, gain: 0.42, attack: 0.01, release: 0.2 },
+    defaultParams: { wave: 'sawtooth', cutoff: 480, gain: 0.42, attack: 0.015, release: 0.35 },
     schema: [
       {
         key: 'wave',
@@ -65,8 +65,8 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
     ],
     render: (expr, params) =>
       `${expr}.s("${str(params, 'wave', 'sawtooth')}")` +
-      `.attack(${num(params, 'attack', 0.01).toFixed(3)})` +
-      `.release(${num(params, 'release', 0.2).toFixed(2)})` +
+      `.attack(${num(params, 'attack', 0.015).toFixed(3)})` +
+      `.release(${num(params, 'release', 0.35).toFixed(2)})` +
       `.lpf(${Math.round(num(params, 'cutoff', 480))})` +
       gainLine(params, 'gain', 0.42),
   },
@@ -92,7 +92,7 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
       const d = delayTimes(bpm)
       return (
         `${expr}.s("triangle")` +
-        `.attack(0.004).decay(0.18).sustain(0.05).release(0.22)` +
+        `.attack(0.008).decay(0.22).sustain(0.08).release(0.35)` +
         `.lpf(${Math.round(num(params, 'cutoff', 2800))})` +
         gainLine(params, 'gain', 0.38) +
         `.room(${num(params, 'room', 0.35).toFixed(2)})` +
@@ -136,7 +136,7 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
       { key: 'cutoff', type: 'slider', label: 'Cutoff', min: 400, max: 4000, step: 50 },
     ],
     render: (expr, params) =>
-      `${expr}.s("sawtooth").attack(0.4).release(1.2)` +
+      `${expr}.s("sawtooth").attack(0.5).release(1.6)` +
       `.lpf(${Math.round(num(params, 'cutoff', 1600))})` +
       gainLine(params, 'gain', 0.28) +
       `.room(${num(params, 'room', 0.7).toFixed(2)})`,
@@ -166,7 +166,7 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
       const d = delayTimes(bpm)
       return (
         `${expr}.s("${str(params, 'wave', 'triangle')}")` +
-        `.attack(0.01).release(0.25)` +
+        `.attack(0.02).release(0.45)` +
         `.lpf(${Math.round(num(params, 'cutoff', 2200))})` +
         gainLine(params, 'gain', 0.32) +
         `.room(${num(params, 'room', 0.35).toFixed(2)})` +

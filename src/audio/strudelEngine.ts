@@ -56,17 +56,24 @@ export async function ensureStrudel(): Promise<void> {
 }
 
 /**
- * Hard stop: halt the scheduler (cycle → 0) and clear delay/reverb buses
- * so stop feels immediate instead of leaving FX tails running.
+ * Soft-halt the scheduler without wiping delay/reverb buses.
+ * Used before a restart so tails can bridge into the next pattern.
  */
-export function stopCode(): void {
+function haltScheduler(): void {
   session += 1
   playing = false
   try {
-    hush() // repl.stop() — stops clock + resets cycle position
+    hush()
   } catch {
     // not initialized yet
   }
+}
+
+/**
+ * Hard stop: halt the scheduler and clear delay/reverb buses.
+ */
+export function stopCode(): void {
+  haltScheduler()
   try {
     resetGlobalEffects()
   } catch {
@@ -76,7 +83,7 @@ export function stopCode(): void {
 
 /**
  * Start (or hard-restart) playback from cycle 0.
- * Always stops first so arrange/song form resets to the beginning.
+ * Keeps FX buses so restarts don't click dry.
  */
 export async function playCode(code: string): Promise<void> {
   await ensureStrudel()
@@ -87,16 +94,14 @@ export async function playCode(code: string): Promise<void> {
     // ignore
   }
 
-  stopCode()
+  haltScheduler()
   const runId = session
 
   await evaluate(code, true)
 
-  // User hit Stop while evaluate was awaiting — stay stopped
   if (session !== runId) {
     try {
       hush()
-      resetGlobalEffects()
     } catch {
       // ignore
     }
