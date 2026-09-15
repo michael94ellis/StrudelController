@@ -5,21 +5,34 @@ import { cn } from '../lib/cn'
 
 type Energy = 'quiet' | 'groove' | 'full'
 
+function layerKey(ids: string[]) {
+  return [...ids].sort().join('\0')
+}
+
 function inferEnergy(
   partIds: string[],
   layers: { quiet: string[]; groove: string[]; full: string[] } | undefined,
 ): Energy {
   if (!layers) return 'groove'
+  const current = layerKey(partIds)
+  // Exact match first — groove parts are often also tagged full, so overlap
+  // scoring always prefers "full" and makes the Groove button look broken.
+  if (current === layerKey(layers.groove)) return 'groove'
+  if (current === layerKey(layers.quiet)) return 'quiet'
+  if (current === layerKey(layers.full)) return 'full'
+
   const set = new Set(partIds)
-  const score = (bucket: string[]) =>
-    bucket.reduce((n, id) => n + (set.has(id) ? 1 : 0), 0)
-  const q = score(layers.quiet)
-  const g = score(layers.groove)
-  const f = score(layers.full)
-  if (f >= g && f >= q && f > 0) return 'full'
-  if (q >= g && q > 0 && g === 0) return 'quiet'
-  if (q > g) return 'quiet'
-  return 'groove'
+  const distance = (bucket: string[]) => {
+    let extra = 0
+    for (const id of bucket) if (!set.has(id)) extra += 1
+    let missing = 0
+    const bucketSet = new Set(bucket)
+    for (const id of partIds) if (!bucketSet.has(id)) missing += 1
+    return extra + missing
+  }
+  const ranked: Energy[] = ['quiet', 'groove', 'full']
+  ranked.sort((a, b) => distance(layers[a]) - distance(layers[b]))
+  return ranked[0] ?? 'groove'
 }
 
 const ENERGIES: Array<{ id: Energy; label: string; hint: string }> = [

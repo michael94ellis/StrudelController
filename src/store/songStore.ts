@@ -248,7 +248,10 @@ export const useSongStore = create<SongState>((set, get) => ({
 
   setSectionEnergy: (sectionId, energy) => {
     patchSong(set, get, (song) => setSongSectionEnergy(song, sectionId, energy))
-    void get().refreshIfPlaying()
+    // Keep loop focused on the section being edited and restart so Quiet /
+    // Groove / Full always audibly switches (live refresh can miss layer swaps).
+    set({ loopSectionId: sectionId, playMode: 'loop', selectedSectionId: sectionId })
+    void get().play()
   },
 
   setPlayMode: (mode) => {
