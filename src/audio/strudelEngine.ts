@@ -6,6 +6,7 @@ import {
   getAudioContext,
   resetGlobalEffects,
 } from '@strudel/web'
+import { registerStrudelSounds } from './strudelPrebake'
 
 let ready: Promise<void> | null = null
 let playing = false
@@ -24,6 +25,10 @@ export type DrumPlayback = {
 }
 
 let drumPlayback: DrumPlayback | null = null
+let loadedDrumBank: string | null = null
+
+const DIRT_HH = ['hh/000_hh3closedhh.wav', 'hh/002_hh3openhh.wav']
+const DIRT_SD = ['sd/rytm-00-hard.wav', 'sd/rytm-01-classic.wav']
 
 export function getDrumPlayback(): DrumPlayback | null {
   return drumPlayback
@@ -31,6 +36,20 @@ export function getDrumPlayback(): DrumPlayback | null {
 
 const DOUGH_MAP =
   'https://cdn.jsdelivr.net/gh/felixroos/dough-samples@main'
+const DOUGH_RAW = 'https://raw.githubusercontent.com/felixroos/dough-samples/main'
+
+const TIDE_DRUM_MACHINES_JSON = `${DOUGH_RAW}/tidal-drum-machines.json`
+const EMU_SP12_JSON = `${DOUGH_RAW}/EmuSP12.json`
+
+function drumMapUrls(primary: string): string[] {
+  const urls = [primary]
+  if (primary.startsWith(DOUGH_RAW)) {
+    urls.push(primary.replace(DOUGH_RAW, DOUGH_MAP))
+  } else if (primary.startsWith(DOUGH_MAP)) {
+    urls.push(primary.replace(DOUGH_MAP, DOUGH_RAW))
+  }
+  return urls
+}
 
 const DIRT_BASE =
   'https://raw.githubusercontent.com/tidalcycles/Dirt-Samples/master/'
@@ -56,7 +75,8 @@ const DRUM_KIT_CANDIDATES: Array<{
       map: {
         bd: ['bd/BT0A0A7.wav', 'bd/BT0A0D0.wav'],
         sd: ['sd/rytm-00-hard.wav', 'sd/rytm-01-classic.wav'],
-        hh: ['hh/000_hh3closedhh.wav', 'hh/002_hh3openhh.wav'],
+        hh: DIRT_HH,
+        ch: DIRT_HH,
         cp: ['cp/HANDCLP0.wav'],
       },
     },
@@ -69,7 +89,8 @@ const DRUM_KIT_CANDIDATES: Array<{
       map: {
         bd: ['bd/BT0A0A7.wav'],
         sd: ['sd/rytm-00-hard.wav'],
-        hh: ['hh/000_hh3closedhh.wav'],
+        hh: DIRT_HH,
+        ch: DIRT_HH,
         cp: ['cp/HANDCLP0.wav'],
       },
     },
@@ -82,7 +103,7 @@ const DRUM_KIT_CANDIDATES: Array<{
   {
     id: '909',
     kind: 'map',
-    mapUrl: `${DOUGH_MAP}/tidal-drum-machines.json`,
+    mapUrl: TIDE_DRUM_MACHINES_JSON,
     bank: 'RolandTR909',
     aliasFrom: {
       bd: 'RolandTR909_bd',
@@ -93,7 +114,7 @@ const DRUM_KIT_CANDIDATES: Array<{
   {
     id: '808',
     kind: 'map',
-    mapUrl: `${DOUGH_MAP}/tidal-drum-machines.json`,
+    mapUrl: TIDE_DRUM_MACHINES_JSON,
     bank: 'RolandTR808',
     aliasFrom: {
       bd: 'RolandTR808_bd',
@@ -104,13 +125,32 @@ const DRUM_KIT_CANDIDATES: Array<{
   {
     id: 'linn',
     kind: 'map',
-    mapUrl: `${DOUGH_MAP}/tidal-drum-machines.json`,
+    mapUrl: TIDE_DRUM_MACHINES_JSON,
     bank: 'AkaiLinn',
     aliasFrom: {
       bd: 'AkaiLinn_bd',
       sd: 'AkaiLinn_sd',
       hh: 'AkaiLinn_hh',
     },
+  },
+  {
+    id: 'mpc60',
+    kind: 'map',
+    mapUrl: TIDE_DRUM_MACHINES_JSON,
+    bank: 'AkaiMPC60',
+    aliasFrom: {
+      bd: 'AkaiMPC60_bd',
+      sd: 'AkaiMPC60_sd',
+      hh: 'AkaiMPC60_hh',
+    },
+  },
+  {
+    id: 'emusp12',
+    kind: 'map',
+    mapUrl: EMU_SP12_JSON,
+    bank: 'EmuSP12',
+    /** JSON already uses bd / sd / hh keys */
+    aliasFrom: { bd: 'bd', sd: 'sd', hh: 'hh' },
   },
 ]
 
@@ -155,65 +195,56 @@ async function loadInlineKit(candidate: (typeof DRUM_KIT_CANDIDATES)[number]): P
   return true
 }
 
+async function fetchJsonFromUrls(urls: string[]): Promise<Record<string, unknown> | null> {
+  for (const url of urls) {
+    try {
+      const res = await fetch(url)
+      if (!res.ok) continue
+      return (await res.json()) as Record<string, unknown>
+    } catch {
+      // try next mirror
+    }
+  }
+  return null
+}
+
+async function registerMapUrls(urls: string[]): Promise<boolean> {
+  for (const mapUrl of urls) {
+    try {
+      await samples(mapUrl, '', { prebake: false })
+      return true
+    } catch (err) {
+      console.warn(`[beat-studio] drum map register failed (${mapUrl})`, err)
+    }
+  }
+  return false
+}
+
 async function loadMapKit(candidate: (typeof DRUM_KIT_CANDIDATES)[number]): Promise<boolean> {
   if (!candidate.mapUrl) return false
-  try {
-    // Register map ('' keeps JSON `_base`)
-    await samples(candidate.mapUrl, '', {
-      // Don't prebake entire machine packs — huge and flaky
-      prebake: false,
-    })
-  } catch (err) {
-    console.warn(`[beat-studio] drum map "${candidate.id}" failed`, err)
-    return false
-  }
 
-  // Dirt-style map already exposes bd/sd/hh
-  if (!candidate.aliasFrom) {
-    const probe = joinUrl(DIRT_BASE, 'bd/BT0A0A7.wav')
-    if (!(await probeAudioUrl(probe))) {
-      console.warn(`[beat-studio] drum kit "${candidate.id}" audio probe failed`)
-      return false
-    }
-    // Prebake the few hits we need
-    await samples(
-      {
-        bd: ['bd/BT0A0A7.wav', 'bd/BT0A0D0.wav'],
-        sd: ['sd/rytm-00-hard.wav'],
-        hh: ['hh/000_hh3closedhh.wav'],
-        cp: ['cp/HANDCLP0.wav'],
-      },
-      DIRT_BASE,
-      { prebake: true },
-    )
-    drumPlayback = { id: candidate.id, mode: 'alias' }
-    console.info(`[beat-studio] drums ready via "${candidate.id}" (alias)`)
-    return true
-  }
-
-  // Machine bank: fetch JSON again to resolve alias URLs and probe
-  const mapRes = await fetch(
+  const mapUrls =
     candidate.mapUrl.startsWith('github:')
-      ? `https://raw.githubusercontent.com/tidalcycles/dirt-samples/main/strudel.json`
-      : candidate.mapUrl,
-  ).catch(() => null)
+      ? [candidate.mapUrl]
+      : drumMapUrls(candidate.mapUrl)
 
-  // For dough drum machines map:
-  let json: Record<string, unknown> | null = null
-  if (candidate.mapUrl.includes('tidal-drum-machines')) {
-    try {
-      json = (await (await fetch(candidate.mapUrl)).json()) as Record<string, unknown>
-    } catch {
-      return false
-    }
-  } else if (mapRes?.ok) {
-    try {
-      json = (await mapRes.json()) as Record<string, unknown>
-    } catch {
-      return false
-    }
+  // Maps that already expose bd/sd/hh (Dirt github index, etc.)
+  if (!candidate.aliasFrom) {
+    const registered = await registerMapUrls(mapUrls)
+    if (!registered && !candidate.mapUrl.startsWith('github:')) return false
+    return loadDirtAliasKit(candidate.id)
   }
+
+  const jsonUrls =
+    candidate.mapUrl.startsWith('github:')
+      ? ['https://raw.githubusercontent.com/tidalcycles/dirt-samples/main/strudel.json']
+      : mapUrls
+
+  const json = await fetchJsonFromUrls(jsonUrls)
   if (!json) return false
+
+  // Optional: register full map for extra sounds (cp, etc.)
+  void registerMapUrls(mapUrls)
 
   const base = String(json._base ?? '')
   const alias = candidate.aliasFrom
@@ -235,17 +266,29 @@ async function loadMapKit(candidate: (typeof DRUM_KIT_CANDIDATES)[number]): Prom
     return false
   }
 
-  // Promote to plain bd/sd/hh so every style hears drums without .bank()
-  await samples(
-    {
-      bd: bdPaths,
-      sd: sdPaths.length ? sdPaths : bdPaths,
-      hh: hhPaths.length ? hhPaths : bdPaths,
-      cp: pick('RolandTR909_cp').length ? pick('RolandTR909_cp') : bdPaths,
-    },
-    base,
-    { prebake: true },
-  )
+  const hhOk =
+    hhPaths.length > 0 && (await probeAudioUrl(joinUrl(base, hhPaths[0])))
+  const sdOk = sdPaths.length > 0 && (await probeAudioUrl(joinUrl(base, sdPaths[0])))
+
+  await samples({ bd: bdPaths }, base, { prebake: true })
+  if (sdOk) {
+    await samples({ sd: sdPaths }, base, { prebake: true })
+  } else {
+    await samples({ sd: DIRT_SD }, DIRT_BASE, { prebake: true })
+  }
+  if (hhOk) {
+    await samples({ hh: hhPaths, ch: hhPaths }, base, { prebake: true })
+  } else {
+    await samples({ hh: DIRT_HH, ch: DIRT_HH }, DIRT_BASE, { prebake: true })
+  }
+  const cpPaths = pick('RolandTR909_cp').length
+    ? pick('RolandTR909_cp')
+    : pick('cp').length
+      ? pick('cp')
+      : []
+  if (cpPaths.length) {
+    await samples({ cp: cpPaths }, base, { prebake: true })
+  }
 
   drumPlayback = {
     id: candidate.id,
@@ -256,6 +299,77 @@ async function loadMapKit(candidate: (typeof DRUM_KIT_CANDIDATES)[number]): Prom
     `[beat-studio] drums ready via "${candidate.id}" → aliased bd/sd/hh`,
   )
   return true
+}
+
+async function loadDirtAliasKit(id: string): Promise<boolean> {
+  const probe = joinUrl(DIRT_BASE, 'bd/BT0A0A7.wav')
+  if (!(await probeAudioUrl(probe))) {
+    console.warn(`[beat-studio] drum kit "${id}" audio probe failed`)
+    return false
+  }
+  await samples(
+    {
+      bd: ['bd/BT0A0A7.wav', 'bd/BT0A0D0.wav'],
+      sd: DIRT_SD,
+      hh: DIRT_HH,
+      ch: DIRT_HH,
+      cp: ['cp/HANDCLP0.wav'],
+    },
+    DIRT_BASE,
+    { prebake: true },
+  )
+  drumPlayback = { id, mode: 'alias' }
+  console.info(`[beat-studio] drums ready via "${id}" (dirt alias)`)
+  return true
+}
+
+function candidatesForBank(bank: string | undefined): (typeof DRUM_KIT_CANDIDATES)[number][] {
+  const inline = DRUM_KIT_CANDIDATES.filter((c) => c.kind === 'inline')
+  if (!bank) return [...DRUM_KIT_CANDIDATES]
+  const match = DRUM_KIT_CANDIDATES.filter((c) => c.bank === bank)
+  const rest = DRUM_KIT_CANDIDATES.filter(
+    (c) => c.bank !== bank && c.kind !== 'inline',
+  )
+  return [...match, ...inline, ...rest]
+}
+
+/**
+ * Load drum aliases for the kit selected on the drum layer (808 for trap, etc.).
+ * Re-loads when the bank changes.
+ */
+export async function ensureDrumBank(bank: string): Promise<DrumPlayback | null> {
+  if (drumPlayback && loadedDrumBank === bank) return drumPlayback
+  const previous = drumPlayback
+  const previousBank = loadedDrumBank
+  drumPlayback = null
+  loadedDrumBank = null
+
+  for (const candidate of candidatesForBank(bank)) {
+    try {
+      const ok =
+        candidate.kind === 'inline'
+          ? await loadInlineKit(candidate)
+          : await loadMapKit(candidate)
+      if (ok) {
+        loadedDrumBank = bank
+        return drumPlayback
+      }
+    } catch (err) {
+      console.warn(`[beat-studio] drum kit "${candidate.id}" error`, err)
+    }
+  }
+
+  drumPlayback = previous
+  loadedDrumBank = previousBank
+  if (drumPlayback) {
+    console.warn(
+      `[beat-studio] could not load kit for bank "${bank}" — keeping "${drumPlayback.id}"`,
+    )
+    return drumPlayback
+  }
+
+  console.error('[beat-studio] no drum kit could be loaded')
+  return null
 }
 
 /** Try each drum kit until audio actually loads. */
@@ -280,13 +394,17 @@ export async function loadDrumKitsUntilReady(): Promise<DrumPlayback | null> {
 
 async function loadSampleBank(
   label: string,
-  url: string,
+  file: string,
   opts: { prebake?: boolean } = {},
 ): Promise<void> {
-  try {
-    await samples(url, '', opts)
-  } catch (err) {
-    console.warn(`[beat-studio] sample bank "${label}" failed to load`, err)
+  const urls = [`${DOUGH_RAW}/${file}`, `${DOUGH_MAP}/${file}`]
+  for (const url of urls) {
+    try {
+      await samples(url, '', opts)
+      return
+    } catch (err) {
+      console.warn(`[beat-studio] sample bank "${label}" failed (${url})`, err)
+    }
   }
 }
 
@@ -296,10 +414,12 @@ export async function ensureStrudel(): Promise<void> {
   ready = (async () => {
     await initStrudel({
       prebake: async () => {
-        // Piano in parallel; drums tried sequentially until one works
+        await registerStrudelSounds()
+        // Drums first — melodic layers can load while the user tweaks the beat.
+        await loadDrumKitsUntilReady()
         await Promise.all([
-          loadSampleBank('piano', `${DOUGH_MAP}/piano.json`, { prebake: true }),
-          loadDrumKitsUntilReady(),
+          loadSampleBank('piano', 'piano.json', { prebake: true }),
+          loadSampleBank('vcsl', 'vcsl.json', { prebake: false }),
         ])
       },
     })
@@ -345,10 +465,11 @@ export function stopCode(): void {
  * Start (or hard-restart) playback from cycle 0.
  * Keeps FX buses so restarts don't click dry.
  */
-export async function playCode(code: string): Promise<void> {
+export async function playCode(code: string, drumBank?: string): Promise<void> {
   await ensureStrudel()
-  // Retry drums on play if prebake lost the race / failed
-  if (!getDrumPlayback()) {
+  if (drumBank) {
+    await ensureDrumBank(drumBank)
+  } else if (!getDrumPlayback()) {
     await loadDrumKitsUntilReady()
   }
   try {

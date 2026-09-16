@@ -1,22 +1,16 @@
 import { useMemo } from 'react'
 import { Transport } from './ui/Transport'
-import { GlobalPanel } from './ui/GlobalPanel'
-import { StyleBrowser } from './ui/StyleBrowser'
+import { BeatList } from './ui/BeatList'
+import { GenrePicker } from './ui/GenrePicker'
+import { MusicPanel } from './ui/MusicPanel'
 import { VibeKnobs } from './ui/VibeKnobs'
-import { SectionEditor } from './ui/SectionEditor'
-import { ArrangementTimeline } from './ui/ArrangementTimeline'
-import { useSongStore } from './store/songStore'
-import { compileLoop, compileSong } from './music/compile'
+import { LayerRack } from './ui/LayerRack'
+import { useBeatStore } from './store/beatStore'
+import { compileBeat } from './music/compile'
 
 export default function App() {
-  const song = useSongStore((s) => s.song)
-  const playMode = useSongStore((s) => s.playMode)
-  const loopSectionId = useSongStore((s) => s.loopSectionId)
-
-  const code = useMemo(() => {
-    if (playMode === 'song') return compileSong(song)
-    return compileLoop(song, loopSectionId ?? song.sections[0]?.id)
-  }, [song, playMode, loopSectionId])
+  const beat = useBeatStore((s) => s.beat)
+  const code = useMemo(() => compileBeat(beat), [beat])
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
@@ -24,7 +18,7 @@ export default function App() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-wood">Strudel</p>
         <h1 className="font-display text-4xl sm:text-5xl text-ink mt-1">Beat Studio</h1>
         <p className="mt-2 max-w-xl text-base text-ink-soft">
-          Start from popular beat styles, then shape energy, density, and song form.
+          Build looping beats — pick a genre, set the harmony, then shape every layer.
         </p>
       </header>
 
@@ -33,11 +27,11 @@ export default function App() {
       </div>
 
       <div className="space-y-10">
-        <GlobalPanel />
-        <StyleBrowser />
+        <BeatList />
+        <GenrePicker />
+        <MusicPanel />
         <VibeKnobs />
-        <ArrangementTimeline />
-        <SectionEditor />
+        <LayerRack />
 
         <details className="rounded-2xl border border-wood/15 bg-cream/40 px-4 py-3">
           <summary className="cursor-pointer text-sm font-medium text-ink-soft">
@@ -51,7 +45,12 @@ export default function App() {
 
       <footer className="mt-12 border-t border-wood/10 pt-4 text-xs text-muted">
         AGPL-3.0 · Uses{' '}
-        <a className="underline hover:text-ink" href="https://strudel.cc" target="_blank" rel="noreferrer">
+        <a
+          className="underline hover:text-ink"
+          href="https://strudel.cc"
+          target="_blank"
+          rel="noreferrer"
+        >
           @strudel/web
         </a>
       </footer>

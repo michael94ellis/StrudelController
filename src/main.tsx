@@ -11,6 +11,13 @@ createRoot(document.getElementById('root')!).render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    if (import.meta.env.DEV) {
+      // Dev: drop any old SW that cached/broke CDN sample fetches.
+      void navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const reg of regs) void reg.unregister()
+      })
+      return
+    }
     void navigator.serviceWorker.register('/sw.js').catch((err) => {
       console.warn('Service worker registration failed', err)
     })

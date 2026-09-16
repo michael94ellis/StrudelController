@@ -1,7 +1,6 @@
-/* Beat Studio service worker — app shell + sample cache */
-const SHELL_CACHE = 'beat-studio-shell-v2'
-const SAMPLE_CACHE = 'beat-studio-samples-v2'
-const FONT_CACHE = 'beat-studio-fonts-v2'
+/* Beat Studio service worker — app shell only (samples fetched by the page) */
+const SHELL_CACHE = 'beat-studio-shell-v3'
+const FONT_CACHE = 'beat-studio-fonts-v3'
 
 const PRECACHE = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg']
 
@@ -13,29 +12,18 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => ![SHELL_CACHE, SAMPLE_CACHE, FONT_CACHE].includes(k))
-          .map((k) => caches.delete(k)),
-      ),
-    ).then(() => self.clients.claim()),
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => ![SHELL_CACHE, FONT_CACHE].includes(k))
+            .map((k) => caches.delete(k)),
+        ),
+      )
+      .then(() => self.clients.claim()),
   )
 })
-
-function isSampleRequest(url) {
-  const hostOk =
-    url.hostname === 'cdn.jsdelivr.net' ||
-    url.hostname === 'raw.githubusercontent.com'
-  if (!hostOk) return false
-  return (
-    url.pathname.includes('dough-samples') ||
-    url.pathname.includes('tidal-drum-machines') ||
-    url.pathname.includes('Dirt-Samples') ||
-    url.pathname.includes('dirt-samples') ||
-    url.pathname.includes('piano')
-  )
-}
 
 function isFontRequest(url) {
   return (
@@ -43,27 +31,17 @@ function isFontRequest(url) {
   )
 }
 
-async function cacheFirst(request, cacheName) {
-  const cache = await caches.open(cacheName)
-  const hit = await cache.match(request)
-  if (hit) return hit
-  const res = await fetch(request)
-  if (res.ok || res.type === 'opaque') {
-    cache.put(request, res.clone())
-  }
-  return res
-}
-
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName)
   const hit = await cache.match(request)
-  const network = fetch(request)
-    .then((res) => {
-      if (res.ok) cache.put(request, res.clone())
-      return res
-    })
-    .catch(() => hit)
-  return hit || network
+  try {
+    const res = await fetch(request)
+    if (res.ok) void cache.put(request, res.clone())
+    return res
+  } catch {
+    if (hit) return hit
+    throw new Error('offline')
+  }
 }
 
 self.addEventListener('fetch', (event) => {
@@ -72,24 +50,41 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
 
-  if (isSampleRequest(url)) {
-    event.respondWith(cacheFirst(request, SAMPLE_CACHE))
+  // Strudel sample/CDN fetches must not go through the SW — intercepting breaks
+  // CORS and surfaces NetworkError when cache-first fetch fails.
+  if (
+    url.hostname === 'cdn.jsdelivr.net' ||
+    url.hostname === 'raw.githubusercontent.com' ||
+    url.hostname === 'github.com'
+  ) {
     return
   }
 
   if (isFontRequest(url)) {
-    event.respondWith(cacheFirst(request, FONT_CACHE))
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(FONT_CACHE)
+        const hit = await cache.match(request)
+        try {
+          const res = await fetch(request)
+          if (res.ok) void cache.put(request, res.clone())
+          return res
+        } catch {
+          if (hit) return hit
+          return fetch(request)
+        }
+      })(),
+    )
     return
   }
 
-  // Same-origin navigations + built assets
   if (url.origin === self.location.origin) {
     if (request.mode === 'navigate') {
       event.respondWith(
         fetch(request)
           .then((res) => {
             const copy = res.clone()
-            caches.open(SHELL_CACHE).then((c) => c.put('/index.html', copy))
+            void caches.open(SHELL_CACHE).then((c) => c.put('/index.html', copy))
             return res
           })
           .catch(() => caches.match('/index.html')),

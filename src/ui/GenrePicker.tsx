@@ -1,18 +1,18 @@
-import { useSongStore } from '../store/songStore'
-import { BEAT_STYLES, getStyle } from '../music/styles/catalog'
+import { useBeatStore } from '../store/beatStore'
+import { GENRES, getGenre } from '../music/genres'
 import { cn } from '../lib/cn'
 
-export function StyleBrowser() {
-  const styleId = useSongStore((s) => s.song.styleId)
-  const applyStyle = useSongStore((s) => s.applyStyle)
-  const active = styleId ? getStyle(styleId) : undefined
+export function GenrePicker() {
+  const genreId = useBeatStore((s) => s.beat.genreId)
+  const setGenre = useBeatStore((s) => s.setGenre)
+  const active = getGenre(genreId)
 
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="font-display text-lg text-ink">Beat style</h2>
+        <h2 className="font-display text-lg text-ink">Genre</h2>
         <p className="text-sm text-muted">
-          Four distinct vibes — then shape them with the knobs below.
+          Loads a starter layer stack, tempo, and harmony — replaces the current layers.
         </p>
         {active ? (
           <p className="mt-2 text-sm text-ink-soft">
@@ -24,26 +24,26 @@ export function StyleBrowser() {
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
-        {BEAT_STYLES.map((style) => (
+        {GENRES.map((genre) => (
           <button
-            key={style.id}
+            key={genre.id}
             type="button"
-            onClick={() => applyStyle(style.id)}
+            onClick={() => setGenre(genre.id)}
             className={cn(
               'rounded-2xl border px-4 py-3 text-left transition',
-              styleId === style.id
+              genreId === genre.id
                 ? 'bg-wood text-cream border-wood'
                 : 'bg-cream/70 text-ink border-wood/15 hover:border-wood/40',
             )}
           >
-            <p className="font-medium">{style.label}</p>
+            <p className="font-medium">{genre.label}</p>
             <p
               className={cn(
                 'mt-1 text-xs leading-snug',
-                styleId === style.id ? 'text-cream/75' : 'text-muted',
+                genreId === genre.id ? 'text-cream/75' : 'text-muted',
               )}
             >
-              {style.blurb}
+              {genre.blurb}
             </p>
           </button>
         ))}

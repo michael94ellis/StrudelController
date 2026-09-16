@@ -1,6 +1,13 @@
 /// <reference types="vite/client" />
 
+declare module '@strudel/soundfonts' {
+  export function registerSoundfonts(): void
+}
+
 declare module '@strudel/web' {
+  export function registerSynthSounds(): void
+  export function registerZZFXSounds(): void
+
   export function initStrudel(options?: {
     prebake?: () => void | Promise<void>
     miniAllStrings?: boolean

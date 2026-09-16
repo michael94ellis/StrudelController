@@ -42,6 +42,20 @@ export function SchemaForm({ schema, params, onChange }: Props) {
             />
           )
         }
+        if (field.type === 'text') {
+          return (
+            <label key={field.key} className="block space-y-1">
+              <span className="text-xs font-medium text-ink-soft">{field.label}</span>
+              <input
+                type="text"
+                value={typeof value === 'string' ? value : ''}
+                placeholder={field.placeholder}
+                onChange={(e) => onChange(field.key, e.target.value)}
+                className="w-full rounded-lg border border-wood/20 bg-cream/80 px-3 py-2 text-sm text-ink"
+              />
+            </label>
+          )
+        }
         return (
           <Toggle
             key={field.key}

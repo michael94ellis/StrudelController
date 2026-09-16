@@ -30,135 +30,112 @@ export type ParamSchema =
       type: 'toggle'
       label: string
     }
+  | {
+      key: string
+      type: 'text'
+      label: string
+      placeholder?: string
+    }
 
-export type InstrumentKind =
-  | 'drumkit'
-  | 'subBass'
-  | 'pluck'
-  | 'piano'
-  | 'pad'
-  | 'lead'
-  | 'bell'
-  | 'texture'
-  | 'guitar'
-
-export type GeneratorName =
-  | 'fourOnFloor'
-  | 'breakbeat'
-  | 'sparsePulse'
-  | 'rootBass'
-  | 'walkingBass'
-  | 'chordStabs'
-  | 'arpUp'
-  | 'melodyPhrase'
-  | 'improv'
-  | 'rimHits'
-  | 'shaker'
-  | 'ambientGrain'
-  | 'chimeHits'
-  | 'houseKit'
-  | 'trapKit'
-  | 'lofiKit'
-  | 'chiptuneKit'
-  | 'houseBass'
-  | 'trapBass'
-  | 'chiptuneArp'
-  | 'lofiKeys'
-  | 'metalKit'
-  | 'metalChug'
-
-export type SectionName =
-  | 'intro'
-  | 'verse'
-  | 'prechorus'
-  | 'chorus'
-  | 'bridge'
-  | 'solo'
-  | 'outro'
-  | string
-
-export type SectionMod =
-  | { type: 'fadeIn' }
-  | { type: 'fadeOut' }
-  | { type: 'gain'; value: number }
-  | { type: 'halfTime' }
-  | { type: 'filterSweep'; from: number; to: number }
-
-export type Instrument = {
-  id: string
-  name: string
-  kind: InstrumentKind
-  params: ParamMap
+/**
+ * Core instrument kinds (see `instruments/core.ts`).
+ *
+ * Genre modules register extra kinds via declaration merging, e.g.
+ *   declare module '../types' { interface InstrumentKinds { guitar: true } }
+ */
+export interface InstrumentKinds {
+  drumkit: true
+  subBass: true
+  pluck: true
+  piano: true
+  pad: true
+  lead: true
+  bell: true
+  texture: true
+  guitar: true
 }
+
+export type InstrumentKind = keyof InstrumentKinds
+
+/**
+ * Core, genre-agnostic generators (see `generators/core.ts`).
+ *
+ * Genre modules register their own via declaration merging, e.g.
+ *   declare module '../types' { interface GeneratorNames { houseKit: true } }
+ */
+export interface GeneratorNames {
+  fourOnFloor: true
+  breakbeat: true
+  sparsePulse: true
+  rootBass: true
+  walkingBass: true
+  chordStabs: true
+  arpUp: true
+  melodyPhrase: true
+  improv: true
+  rimHits: true
+  shaker: true
+  ambientGrain: true
+  chimeHits: true
+}
+
+export type GeneratorName = keyof GeneratorNames
 
 export type Progression = {
   id: string
-  name: string
+  label: string
   chords: ChordSpec[]
 }
 
-export type Part = {
+/** User-facing variation knobs, all 0–1. Applied at compile time. */
+export type BeatKnobs = {
+  /** Overall intensity / gain fullness */
+  energy: number
+  /** How busy patterns are */
+  density: number
+  /** Swing / pocket (maps into the genre's swing model) */
+  groove: number
+  /** Brightness / filter openness */
+  brightness: number
+}
+
+export const DEFAULT_KNOBS: BeatKnobs = {
+  energy: 0.6,
+  density: 0.6,
+  groove: 0.4,
+  brightness: 0.5,
+}
+
+/**
+ * One voice in a loop: a sample kit / synth voice (`kind` + `instrumentParams`)
+ * playing a pattern (`generator` + `params`).
+ */
+export type BeatLayer = {
   id: string
   name: string
-  instrumentId: string
+  enabled: boolean
+  kind: InstrumentKind
+  instrumentParams: ParamMap
   generator: GeneratorName
   params: ParamMap
-  enabled: boolean
 }
 
-export type SectionPartRef = {
-  partId: string
-  mods?: SectionMod[]
-}
-
-export type Section = {
+/**
+ * A beat is a single loop. Its length is the chord progression length —
+ * generators emit `note("<c1 c2 c3 c4>")`, one chord per cycle.
+ */
+export type Beat = {
   id: string
-  name: SectionName
-  bars: number
-  progressionId: string
-  parts: SectionPartRef[]
-  mods?: SectionMod[]
-}
-
-export type ArrangementSlot = {
-  sectionId: string
-  repeat?: number
-}
-
-export type SongGlobals = {
+  name: string
+  /** Genre template this was built from; supplies the swing model */
+  genreId: string
   bpm: number
   key: string
   scale: string
-  swing: number
+  progressionId: string
+  knobs: BeatKnobs
+  layers: BeatLayer[]
 }
-
-export type Song = {
-  id: string
-  title: string
-  globals: SongGlobals
-  instruments: Instrument[]
-  progressions: Progression[]
-  parts: Part[]
-  sections: Section[]
-  arrangement: ArrangementSlot[]
-  /** Active beat style id from the style catalog */
-  styleId?: string
-  /** User-facing variation knobs (0–1) */
-  knobs?: {
-    energy: number
-    density: number
-    groove: number
-    brightness: number
-  }
-  /** Part id buckets for Quiet / Groove / Full section energy */
-  styleLayers?: {
-    quiet: string[]
-    groove: string[]
-    full: string[]
-  }
-}
-
-export type PlayMode = 'loop' | 'song'
 
 export type HarmonyCtx = {
   key: string
@@ -193,5 +170,7 @@ export function bool(params: ParamMap, key: string, fallback: boolean): boolean 
 let uid = 0
 export function newId(prefix = 'id'): string {
   uid += 1
-  return `${prefix}-${uid}`
+  // Random suffix — a plain counter restarts at 1 each load and would collide
+  // with ids already persisted in the library.
+  return `${prefix}-${uid}-${Math.random().toString(36).slice(2, 8)}`
 }
