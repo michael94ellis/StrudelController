@@ -115,7 +115,8 @@ function buildFromRecipe(recipe: StyleRecipe, title?: string): BuiltStyle {
       bpm: e.bpm,
       key: e.key,
       scale: e.scale,
-      swing: 0.1,
+      // Hardcore needs a straight grid — swing makes drums feel missing
+      swing: e.id === 'metal' ? 0 : 0.1,
     },
     instruments,
     progressions,
@@ -472,6 +473,61 @@ const RECIPES: Record<string, () => StyleRecipe> = {
         ],
       },
     ),
+
+  metal: () =>
+    recipe(
+      'metal',
+      [
+        {
+          kind: 'drumkit',
+          name: 'Drums',
+          params: { source: 'dirt', gain: 0.95, crunch: 0.2 },
+        },
+        {
+          kind: 'subBass',
+          name: 'Bass',
+          params: {
+            wave: 'square',
+            cutoff: 1100,
+            gain: 0.75,
+            attack: 0.001,
+            release: 0.08,
+            crunch: 0.35,
+          },
+        },
+        {
+          kind: 'guitar',
+          name: 'Keys',
+          params: { gain: 0.75, cutoff: 3200, crunch: 0.72, attack: 0.001, release: 0.05 },
+        },
+        {
+          kind: 'guitar',
+          name: 'Lead',
+          params: { gain: 0.55, cutoff: 3800, crunch: 0.75, attack: 0.001, release: 0.08 },
+        },
+      ],
+      ['anthem', 'anthem'],
+      {
+        drumsQuiet: { generator: 'metalKit', params: { energy: 0.35 } },
+        drumsGroove: { generator: 'metalKit', params: { energy: 0.75 } },
+        drumsFull: { generator: 'metalKit', params: { energy: 0.95 } },
+        // Rhythm guitar chugs (partsFrom wires this to Bass instrument)
+        bass: { generator: 'metalChug', params: { octave: 2 } },
+        keysQuiet: {
+          generator: 'chordStabs',
+          params: { voicing: 'power', rhythm: 'whole' },
+        },
+        keysGroove: {
+          generator: 'metalChug',
+          params: { octave: 3 },
+        },
+        keysFull: {
+          generator: 'chordStabs',
+          params: { voicing: 'power', rhythm: 'quarters' },
+        },
+        lead: { generator: 'melodyPhrase', params: { density: 0.35, octave: 4 } },
+      },
+    ),
 }
 
 export function buildStyle(styleId: string, title?: string): BuiltStyle {
@@ -486,7 +542,7 @@ export function applyKnobsToSong(song: Song, knobs: SongKnobs): Song {
   const brightness = knobs.brightness
   const groove = knobs.groove
 
-  const swing = 0.05 + groove * 0.2
+  const swing = song.styleId === 'metal' ? 0 : 0.05 + groove * 0.2
 
   const instruments = song.instruments.map((inst) => {
     const params = { ...inst.params }

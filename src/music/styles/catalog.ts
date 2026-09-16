@@ -43,6 +43,16 @@ export const BEAT_STYLES: StyleEntry[] = [
     key: 'Bb',
     scale: 'major',
   },
+  {
+    id: 'metal',
+    label: 'Hardcore',
+    kind: 'genre',
+    genreId: 'metal',
+    blurb: 'D-beat drive, two-step kicks, breakdown stomps — original hardcore energy.',
+    bpm: 180,
+    key: 'E',
+    scale: 'minor',
+  },
 ]
 
 export const ALL_STYLES = BEAT_STYLES

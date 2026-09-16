@@ -146,7 +146,7 @@ export const generatorDefs: Record<GeneratorName, GeneratorDef> = {
   chordStabs: {
     name: 'chordStabs',
     label: 'Chord stabs',
-    suits: ['pluck', 'piano', 'pad'],
+    suits: ['pluck', 'piano', 'pad', 'lead'],
     defaultParams: { voicing: 'triad', rhythm: 'half' },
     schema: [
       {
@@ -156,6 +156,7 @@ export const generatorDefs: Record<GeneratorName, GeneratorDef> = {
         options: [
           { value: 'triad', label: 'Triad' },
           { value: 'seventh', label: 'Seventh' },
+          { value: 'power', label: 'Power (1+5)' },
         ],
       },
       {
@@ -165,6 +166,7 @@ export const generatorDefs: Record<GeneratorName, GeneratorDef> = {
         options: [
           { value: 'whole', label: 'Whole' },
           { value: 'half', label: 'Half' },
+          { value: 'quarters', label: 'Quarters' },
           { value: 'syncopated', label: 'Syncopated' },
         ],
       },
@@ -172,11 +174,21 @@ export const generatorDefs: Record<GeneratorName, GeneratorDef> = {
     generate: (ctx, params) => {
       const voicing = str(params, 'voicing', 'triad')
       const rhythm = str(params, 'rhythm', 'half')
-      const stacks = (voicing === 'seventh' ? ctx.sevenths : ctx.triads)
-        .map((t) => `[${t.join(',')}]`)
-        .join(' ')
+      const source =
+        voicing === 'seventh'
+          ? ctx.sevenths
+          : voicing === 'power'
+            ? ctx.triads.map((t) => [t[0], t[2]])
+            : ctx.triads
+      const stacks = source.map((t) => `[${t.join(',')}]`).join(' ')
       const struct =
-        rhythm === 'whole' ? 'x' : rhythm === 'syncopated' ? 'x ~ x ~ ~ x ~ ~' : 'x ~ x ~'
+        rhythm === 'whole'
+          ? 'x'
+          : rhythm === 'quarters'
+            ? 'x x x x'
+            : rhythm === 'syncopated'
+              ? 'x ~ x ~ ~ x ~ ~'
+              : 'x ~ x ~'
       return `note("<${stacks}>").struct("${struct}")`
     },
   },
@@ -449,6 +461,53 @@ export const generatorDefs: Record<GeneratorName, GeneratorDef> = {
         .join(' ')
       // Long holds with a late ghost stab
       return `note("<${stacks}>").struct("x ~ ~ ~ ~ x ~ ~")`
+    },
+  },
+
+  /**
+   * Hardcore kit — D-beat / two-step / breakdown using Dirt bd/sd/hh
+   * (no bank dependency — audible even if 909 map fails).
+   */
+  metalKit: {
+    name: 'metalKit',
+    label: 'Hardcore kit',
+    suits: ['drumkit'],
+    defaultParams: { energy: 0.8 },
+    schema: [{ key: 'energy', type: 'slider', label: 'Energy', min: 0.3, max: 1, step: 0.05 }],
+    generate: (_ctx, params) => {
+      const e = num(params, 'energy', 0.8)
+      if (e < 0.45) {
+        return `stack(s("bd ~ ~ ~ bd ~ ~ ~"), s("~ ~ sd ~ ~ ~ sd ~"), s("hh ~ ~ hh ~ ~ hh ~"))`
+      }
+      if (e < 0.7) {
+        return `stack(s("bd ~ ~ bd ~ ~ bd ~"), s("~ sd ~ ~ ~ sd ~ ~"), s("hh*8"))`
+      }
+      const hats = e > 0.9 ? 'hh*16' : 'hh*8'
+      return `stack(s("bd ~ bd bd ~ bd ~ bd"), s("~ sd ~ sd"), s("${hats}"))`
+    },
+  },
+
+  /**
+   * Hardcore guitar/bass chugs — mid register so it cuts on small speakers.
+   */
+  metalChug: {
+    name: 'metalChug',
+    label: 'Hardcore chug',
+    suits: ['subBass', 'lead', 'guitar'],
+    defaultParams: { octave: 2 },
+    schema: [{ key: 'octave', type: 'slider', label: 'Octave', min: 1, max: 3, step: 1 }],
+    generate: (ctx, params) => {
+      const oct = num(params, 'octave', 2)
+      const line = ctx.roots
+        .map((r, i) => {
+          const n = r.replace(/\d+$/, String(oct))
+          if (i % 2 === 0) {
+            return `${n} ${n} ${n} ${n} ${n} ${n} ${n} ${n}`
+          }
+          return `${n} ${n} ${n} ~ ${n} ~ ${n} ${n}`
+        })
+        .join(' ')
+      return `note("${line}")`
     },
   },
 }

@@ -12,7 +12,7 @@ declare module '@strudel/web' {
 
   export function samples(
     sampleMap: string | Record<string, unknown>,
-    baseUrl?: string,
+    baseUrl?: string | Record<string, unknown>,
     options?: Record<string, unknown>,
   ): Promise<unknown>
 

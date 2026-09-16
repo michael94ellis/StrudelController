@@ -40,6 +40,7 @@ export type InstrumentKind =
   | 'lead'
   | 'bell'
   | 'texture'
+  | 'guitar'
 
 export type GeneratorName =
   | 'fourOnFloor'
@@ -63,6 +64,8 @@ export type GeneratorName =
   | 'trapBass'
   | 'chiptuneArp'
   | 'lofiKeys'
+  | 'metalKit'
+  | 'metalChug'
 
 export type SectionName =
   | 'intro'

@@ -1,7 +1,7 @@
 /* Beat Studio service worker — app shell + sample cache */
-const SHELL_CACHE = 'beat-studio-shell-v1'
-const SAMPLE_CACHE = 'beat-studio-samples-v1'
-const FONT_CACHE = 'beat-studio-fonts-v1'
+const SHELL_CACHE = 'beat-studio-shell-v2'
+const SAMPLE_CACHE = 'beat-studio-samples-v2'
+const FONT_CACHE = 'beat-studio-fonts-v2'
 
 const PRECACHE = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg']
 
@@ -24,12 +24,16 @@ self.addEventListener('activate', (event) => {
 })
 
 function isSampleRequest(url) {
+  const hostOk =
+    url.hostname === 'cdn.jsdelivr.net' ||
+    url.hostname === 'raw.githubusercontent.com'
+  if (!hostOk) return false
   return (
-    url.hostname === 'raw.githubusercontent.com' &&
-    (url.pathname.includes('dough-samples') ||
-      url.pathname.includes('tidal-drum-machines') ||
-      url.pathname.includes('Dirt-Samples') ||
-      url.pathname.includes('piano'))
+    url.pathname.includes('dough-samples') ||
+    url.pathname.includes('tidal-drum-machines') ||
+    url.pathname.includes('Dirt-Samples') ||
+    url.pathname.includes('dirt-samples') ||
+    url.pathname.includes('piano')
   )
 }
 

@@ -1,6 +1,7 @@
 import type { InstrumentKind, ParamMap, ParamSchema } from '../types'
 import { bool, num, str } from '../types'
 import { delayTimes } from '../theory'
+import { getDrumPlayback } from '../../audio/strudelEngine'
 
 export type InstrumentDef = {
   kind: InstrumentKind
@@ -36,10 +37,60 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
     ],
     render: (expr, params) => {
       const crunch = num(params, 'crunch', 0)
-      const bank = str(params, 'bank', 'RolandTR909')
+      const source = str(params, 'source', 'bank')
+      const drums = getDrumPlayback()
+      // Once the fallback loader aliases bd/sd/hh, never use .bank() —
+      // bank prefixes were the main "no drums" failure mode.
+      const useAlias =
+        source === 'dirt' ||
+        drums?.mode === 'alias' ||
+        source === 'alias'
+      if (useAlias) {
+        return `${expr}${gainLine(params, 'gain', 0.85)}.room(0.08).clip(1)${
+          crunch > 0.01 ? `.distort(${crunch.toFixed(2)})` : ''
+        }`
+      }
+      const bank = drums?.bank ?? str(params, 'bank', 'RolandTR909')
       return `${expr}.bank("${bank}")${gainLine(params, 'gain', 0.72)}.room(0.12).clip(1)${
         crunch > 0.01 ? `.distort(${crunch.toFixed(2)})` : ''
       }`
+    },
+  },
+
+  /**
+   * Distorted rhythm/lead guitar — harsh square + drive (not soft keyboard).
+   */
+  guitar: {
+    kind: 'guitar',
+    label: 'Guitar',
+    defaultParams: {
+      gain: 0.72,
+      cutoff: 3000,
+      crunch: 0.7,
+      attack: 0.001,
+      release: 0.05,
+    },
+    schema: [
+      { key: 'gain', type: 'slider', label: 'Gain', min: 0, max: 1, step: 0.01 },
+      { key: 'cutoff', type: 'slider', label: 'Cutoff', min: 400, max: 5000, step: 50 },
+      { key: 'crunch', type: 'slider', label: 'Drive', min: 0, max: 0.9, step: 0.01 },
+      { key: 'attack', type: 'slider', label: 'Attack', min: 0, max: 0.05, step: 0.001 },
+      { key: 'release', type: 'slider', label: 'Release', min: 0.02, max: 0.4, step: 0.01 },
+    ],
+    render: (expr, params) => {
+      const crunch = Math.max(0.4, num(params, 'crunch', 0.7))
+      return (
+        `${expr}.s("square")` +
+        `.attack(${num(params, 'attack', 0.001).toFixed(3)})` +
+        `.decay(0.05).sustain(0.08)` +
+        `.release(${num(params, 'release', 0.05).toFixed(2)})` +
+        `.lpf(${Math.round(num(params, 'cutoff', 3000))})` +
+        `.hpf(140)` +
+        `.distort(${crunch.toFixed(2)})` +
+        `.shape(0.65)` +
+        `.clip(0.8)` +
+        gainLine(params, 'gain', 0.72)
+      )
     },
   },
 
@@ -63,12 +114,19 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
       { key: 'attack', type: 'slider', label: 'Attack', min: 0, max: 0.2, step: 0.005 },
       { key: 'release', type: 'slider', label: 'Release', min: 0.05, max: 0.8, step: 0.01 },
     ],
-    render: (expr, params) =>
-      `${expr}.s("${str(params, 'wave', 'sawtooth')}")` +
-      `.attack(${num(params, 'attack', 0.015).toFixed(3)})` +
-      `.release(${num(params, 'release', 0.35).toFixed(2)})` +
-      `.lpf(${Math.round(num(params, 'cutoff', 480))})` +
-      gainLine(params, 'gain', 0.42),
+    render: (expr, params) => {
+      const crunch = num(params, 'crunch', 0)
+      return (
+        `${expr}.s("${str(params, 'wave', 'sawtooth')}")` +
+        `.attack(${num(params, 'attack', 0.015).toFixed(3)})` +
+        `.decay(0.08).sustain(0.35)` +
+        `.release(${num(params, 'release', 0.35).toFixed(2)})` +
+        `.lpf(${Math.round(num(params, 'cutoff', 480))})` +
+        `.hpf(35)` +
+        (crunch > 0.01 ? `.distort(${crunch.toFixed(2)})` : '') +
+        gainLine(params, 'gain', 0.42)
+      )
+    },
   },
 
   pluck: {
@@ -91,14 +149,15 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
     render: (expr, params, bpm) => {
       const d = delayTimes(bpm)
       return (
-        `${expr}.s("triangle")` +
-        `.attack(0.008).decay(0.22).sustain(0.08).release(0.35)` +
-        `.lpf(${Math.round(num(params, 'cutoff', 2800))})` +
-        gainLine(params, 'gain', 0.38) +
-        `.room(${num(params, 'room', 0.35).toFixed(2)})` +
-        `.delay(${num(params, 'delay', 0.22).toFixed(2)})` +
+        `${expr}.s("square")` +
+        `.attack(0.001).decay(0.1).sustain(0.02).release(0.08)` +
+        `.lpf(${Math.round(num(params, 'cutoff', 3200))})` +
+        `.hpf(200)` +
+        gainLine(params, 'gain', 0.4) +
+        `.room(${Math.min(0.35, num(params, 'room', 0.2)).toFixed(2)})` +
+        `.delay(${num(params, 'delay', 0.12).toFixed(2)})` +
         `.delaytime(${d.dotted8th.toFixed(4)})` +
-        `.delayfeedback(${num(params, 'delayFeedback', 0.28).toFixed(2)})`
+        `.delayfeedback(${num(params, 'delayFeedback', 0.2).toFixed(2)})`
       )
     },
   },
@@ -145,7 +204,7 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
   lead: {
     kind: 'lead',
     label: 'Lead',
-    defaultParams: { wave: 'triangle', gain: 0.32, room: 0.35, delay: 0.2, cutoff: 2200 },
+    defaultParams: { wave: 'square', gain: 0.38, room: 0.2, delay: 0.12, cutoff: 2800 },
     schema: [
       {
         key: 'wave',
@@ -165,14 +224,15 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
     render: (expr, params, bpm) => {
       const d = delayTimes(bpm)
       return (
-        `${expr}.s("${str(params, 'wave', 'triangle')}")` +
-        `.attack(0.02).release(0.45)` +
-        `.lpf(${Math.round(num(params, 'cutoff', 2200))})` +
-        gainLine(params, 'gain', 0.32) +
-        `.room(${num(params, 'room', 0.35).toFixed(2)})` +
-        `.delay(${num(params, 'delay', 0.2).toFixed(2)})` +
+        `${expr}.s("${str(params, 'wave', 'square')}")` +
+        `.attack(0.005).decay(0.1).sustain(0.3).release(0.15)` +
+        `.lpf(${Math.round(num(params, 'cutoff', 2800))})` +
+        `.hpf(150)` +
+        gainLine(params, 'gain', 0.38) +
+        `.room(${Math.min(0.4, num(params, 'room', 0.2)).toFixed(2)})` +
+        `.delay(${num(params, 'delay', 0.12).toFixed(2)})` +
         `.delaytime(${d.eighth.toFixed(4)})` +
-        `.delayfeedback(0.25)`
+        `.delayfeedback(0.2)`
       )
     },
   },
@@ -241,8 +301,8 @@ export const instrumentDefs: Record<InstrumentKind, InstrumentDef> = {
         return `note("c2").s("sawtooth").attack(1).release(2).lpf(${cut})${g}${room}`
       }
       if (mode === 'noise') {
-        // Dirt-Samples crackle — already loaded
-        return `s("crackle*2").density(0.04)${g}${room}${
+        // Soft hiss via sine bed — Dirt "crackle" isn't in the bank map
+        return `note("c4").s("sine").attack(0.8).release(1.5).lpf(${Math.min(cut, 900)})${g}${room}${
           shimmer ? '.delay(0.3).delayfeedback(0.4)' : ''
         }`
       }
