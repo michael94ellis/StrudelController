@@ -77,7 +77,10 @@ type BeatState = {
    */
   exportLoop: (length: ExportLength) => Promise<void>
   stopExport: () => Promise<void>
+  cancelExport: () => void
   exporting: boolean
+  /** Fixed-length take vs open-ended ∞ take (drives Stop & save UI). */
+  exportMode: null | 'fixed' | 'live'
   exportLabel: string | null
 }
 
@@ -137,6 +140,7 @@ export const useBeatStore = create<BeatState>((set, get) => {
     playing: false,
     error: null,
     exporting: false,
+    exportMode: null,
     exportLabel: null,
 
     selectBeat: (id) => {
@@ -366,6 +370,7 @@ export const useBeatStore = create<BeatState>((set, get) => {
       if (length === 'indefinite') {
         set({
           exporting: true,
+          exportMode: 'live',
           exportLabel: 'Recording… tap Stop & save when done',
           error: null,
         })
@@ -376,6 +381,7 @@ export const useBeatStore = create<BeatState>((set, get) => {
           cancelLiveRecording()
           set({
             exporting: false,
+            exportMode: null,
             exportLabel: null,
             error: err instanceof Error ? err.message : String(err),
           })
@@ -385,7 +391,7 @@ export const useBeatStore = create<BeatState>((set, get) => {
 
       const sec = plan.seconds!
       const label = `Recording ${plan.loops}× (~${sec.toFixed(1)}s)…`
-      set({ exporting: true, exportLabel: label, error: null })
+      set({ exporting: true, exportMode: 'fixed', exportLabel: label, error: null })
       try {
         await prepare()
         const { blob, extension, seconds } = await recordLoopAudio(sec)
@@ -394,17 +400,19 @@ export const useBeatStore = create<BeatState>((set, get) => {
         downloadBlob(blob, `${base}-${plan.loops}x-${secTag}s.${extension}`)
         set({ exportLabel: null })
       } catch (err) {
+        cancelLiveRecording()
+        const msg = err instanceof Error ? err.message : String(err)
         set({
-          error: err instanceof Error ? err.message : String(err),
+          error: msg === 'Recording cancelled.' ? null : msg,
           exportLabel: null,
         })
       } finally {
-        set({ exporting: false })
+        set({ exporting: false, exportMode: null })
       }
     },
 
     stopExport: async () => {
-      if (!get().exporting || !isLiveRecording()) return
+      if (!get().exporting || get().exportMode !== 'live' || !isLiveRecording()) return
       const beat = get().beat
       const plan = planExport(beat, 'indefinite')
       set({ exportLabel: 'Finishing loop…' })
@@ -415,15 +423,31 @@ export const useBeatStore = create<BeatState>((set, get) => {
         const secTag = Number.isInteger(seamless) ? String(seamless) : seamless.toFixed(1)
         const loops = Math.max(1, Math.round(seamless / plan.cycleSeconds))
         downloadBlob(blob, `${base}-${loops}x-${secTag}s.${extension}`)
-        set({ exportLabel: null, exporting: false })
+        set({ exportLabel: null, exporting: false, exportMode: null })
       } catch (err) {
         cancelLiveRecording()
+        const msg = err instanceof Error ? err.message : String(err)
         set({
           exporting: false,
+          exportMode: null,
           exportLabel: null,
-          error: err instanceof Error ? err.message : String(err),
+          error: msg === 'Recording cancelled.' ? null : msg,
         })
       }
+    },
+
+    cancelExport: () => {
+      if (!get().exporting) return
+      cancelLiveRecording()
+      if (get().exportMode === 'live') {
+        set({
+          exporting: false,
+          exportMode: null,
+          exportLabel: null,
+          error: null,
+        })
+      }
+      // Fixed takes unwind via recordLoopAudio → exportLoop finally.
     },
   }
 })

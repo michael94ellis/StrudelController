@@ -25,9 +25,32 @@ export function barSeconds(bpm: number): number {
 export function beatCycleBars(beat: Beat): number {
   const lengths = beat.layers
     .filter((l) => l.enabled)
-    .map((l) => Math.max(1, resolveProgression(l).chords.length))
+    .map((l) => {
+      // Drum rows repeat every bar; harmonic length only matters for pitched parts.
+      if (l.kind === 'drumkit') return 1
+      return Math.max(1, chordCycleBars(resolveProgression(l).chords))
+    })
   if (!lengths.length) return 4
   return lengths.reduce((acc, n) => lcm(acc, n), lengths[0]!)
+}
+
+/** Shortest repeating chord period (padded Mood loops collapse to 4, not 16). */
+function chordCycleBars(chords: Array<{ degree: string; quality?: string }>): number {
+  const n = chords.length
+  if (n <= 1) return Math.max(1, n)
+  const key = (c: { degree: string; quality?: string }) => `${c.degree}:${c.quality ?? ''}`
+  for (let p = 1; p <= Math.floor(n / 2); p++) {
+    if (n % p !== 0) continue
+    let ok = true
+    for (let i = p; i < n; i++) {
+      if (key(chords[i]!) !== key(chords[i % p]!)) {
+        ok = false
+        break
+      }
+    }
+    if (ok) return p
+  }
+  return n
 }
 
 export function beatCycleSeconds(beat: Beat): number {

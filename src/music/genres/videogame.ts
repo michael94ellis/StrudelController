@@ -19,7 +19,7 @@ export const videogame: GenreModule = {
   key: 'F',
   scale: 'major',
   swing: SWUNG,
-  defaultProgressionId: 'journey',
+  defaultProgressionId: 'anthem',
 
   generators: {
     /** Bright adventure / RPG town drums */

@@ -4,10 +4,13 @@ import {
   hush,
   samples,
   getAudioContext,
+  getLoadedBuffer,
+  getSound,
+  loadBuffer,
   resetGlobalEffects,
 } from '@strudel/web'
 import { installStrudelLoggerFilter } from './strudelLogger'
-import { registerStrudelSounds } from './strudelPrebake'
+import { loadDirtSampleIndex, registerStrudelSounds } from './strudelPrebake'
 
 installStrudelLoggerFilter()
 
@@ -29,9 +32,19 @@ export type DrumPlayback = {
 
 let drumPlayback: DrumPlayback | null = null
 let loadedDrumBank: string | null = null
+/** Kit id whose buffers were fully decoded into Strudel's sampler cache. */
+let preloadedDrumId: string | null = null
+let preloadInFlight: Promise<boolean> | null = null
+/** Resolves after optional Dirt index load + drum alias restore. */
+let dirtSettle: Promise<void> | null = null
 
-const DIRT_HH = ['hh/000_hh3closedhh.wav', 'hh/002_hh3openhh.wav']
+/** Voices our patterns may trigger — preload these so the first hit isn't late. */
+const DRUM_VOICES = ['bd', 'sd', 'hh', 'ch', 'cp', 'oh', 'rim', 'sh'] as const
+
+const DIRT_HH = ['hh/000_hh3closedhh.wav', 'hh27/000_hh27closedhh.wav']
 const DIRT_SD = ['sd/rytm-00-hard.wav', 'sd/rytm-01-classic.wav']
+/** Voices that must be decoded before Play — otherwise Strudel skips the first hits. */
+const REQUIRED_DRUM_VOICES = ['bd', 'sd', 'hh'] as const
 
 export function getDrumPlayback(): DrumPlayback | null {
   return drumPlayback
@@ -138,6 +151,118 @@ export function getSession() {
   return session
 }
 
+/** Flatten a Strudel sample bank (array or note→urls map) into absolute URLs. */
+function collectSampleUrls(samples: unknown): string[] {
+  if (typeof samples === 'string') return [samples]
+  if (Array.isArray(samples)) {
+    return samples.flatMap((entry) => collectSampleUrls(entry))
+  }
+  if (samples && typeof samples === 'object') {
+    return Object.entries(samples as Record<string, unknown>)
+      .filter(([key]) => !key.startsWith('_'))
+      .flatMap(([, value]) => collectSampleUrls(value))
+  }
+  return []
+}
+
+/**
+ * Decode registered drum sample URLs into Strudel's buffer cache before play.
+ * Maps alone are not enough — lazy fetch on the first hit is skipped when it
+ * exceeds Strudel's ~100ms schedule window (drums "start late").
+ */
+export async function preloadDrumBuffers(force = false): Promise<boolean> {
+  const kit = drumPlayback
+  if (!kit) return false
+  if (!force && preloadedDrumId === kit.id && criticalDrumBuffersReady()) {
+    return true
+  }
+  if (preloadInFlight) {
+    const ok = await preloadInFlight
+    if (!force && preloadedDrumId === kit.id && ok) return true
+  }
+
+  const run = (async (): Promise<boolean> => {
+    let ac: AudioContext
+    try {
+      ac = getAudioContext()
+    } catch {
+      return false
+    }
+
+    const urls = new Set<string>()
+    for (const name of DRUM_VOICES) {
+      for (const url of sampleUrlsForVoice(name)) urls.add(url)
+    }
+
+    if (urls.size === 0) {
+      console.warn('[beat-studio] no drum sample URLs to preload')
+      return false
+    }
+
+    await Promise.all(
+      [...urls].map(async (url) => {
+        if (getLoadedBuffer(url)) return
+        try {
+          await loadBuffer(url, ac, 'drum')
+        } catch (err) {
+          console.warn(`[beat-studio] drum preload failed (${url})`, err)
+        }
+      }),
+    )
+
+    const readyNow = criticalDrumBuffersReady()
+    if (drumPlayback?.id === kit.id && readyNow) {
+      preloadedDrumId = kit.id
+      console.info(`[beat-studio] preloaded ${urls.size} drum buffers for "${kit.id}"`)
+    } else if (!readyNow) {
+      preloadedDrumId = null
+      const missing = REQUIRED_DRUM_VOICES.filter(
+        (v) => !sampleUrlsForVoice(v).some((u) => getLoadedBuffer(u)),
+      )
+      console.warn(`[beat-studio] drum preload incomplete for "${kit.id}" — missing ${missing.join(', ')}`)
+    }
+    return readyNow
+  })()
+
+  const tracked = run.finally(() => {
+    if (preloadInFlight === tracked) preloadInFlight = null
+  })
+  preloadInFlight = tracked
+  return tracked
+}
+
+function sampleUrlsForVoice(name: string): string[] {
+  try {
+    const sound = getSound(name)
+    if (sound?.data?.type !== 'sample') return []
+    return collectSampleUrls(sound.data.samples).filter(
+      (url) => url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:'),
+    )
+  } catch {
+    return []
+  }
+}
+
+function criticalDrumBuffersReady(): boolean {
+  return REQUIRED_DRUM_VOICES.every((name) => {
+    const urls = sampleUrlsForVoice(name)
+    return urls.length > 0 && urls.some((url) => Boolean(getLoadedBuffer(url)))
+  })
+}
+
+/**
+ * Dirt's full sample index re-registers `bd`/`sd`/`hh` and undoes our kit.
+ * Call after that index loads (or any bulk `samples()` map) to restore aliases.
+ */
+export async function reassertDrumKit(): Promise<DrumPlayback | null> {
+  const bank = loadedDrumBank
+  drumPlayback = null
+  loadedDrumBank = null
+  preloadedDrumId = null
+  if (bank) return ensureDrumBank(bank)
+  return loadDrumKitsUntilReady()
+}
+
 async function probeAudioUrl(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, { method: 'GET', cache: 'force-cache' })
@@ -165,8 +290,23 @@ async function loadInlineKit(candidate: DrumKitCandidate): Promise<boolean> {
     console.warn(`[beat-studio] drum kit "${candidate.id}" probe failed`)
     return false
   }
-  await samples(inline.map, inline.base, { prebake: true })
+
+  const filtered: Record<string, string[]> = {}
+  for (const [key, paths] of Object.entries(inline.map)) {
+    const good: string[] = []
+    for (const path of paths) {
+      if (await probeAudioUrl(joinUrl(inline.base, path))) good.push(path)
+    }
+    if (good.length) filtered[key] = good
+  }
+  if (!filtered.bd?.length) {
+    console.warn(`[beat-studio] drum kit "${candidate.id}" has no usable bd`)
+    return false
+  }
+
+  await samples(filtered, inline.base, { prebake: true })
   drumPlayback = { id: candidate.id, mode: 'alias' }
+  preloadedDrumId = null
   console.info(`[beat-studio] drums ready via "${candidate.id}" (alias bd/sd/hh)`)
   return true
 }
@@ -299,6 +439,7 @@ async function loadMapKit(candidate: DrumKitCandidate): Promise<boolean> {
     mode: 'alias',
     bank: candidate.bank,
   }
+  preloadedDrumId = null
   console.info(
     `[beat-studio] drums ready via "${candidate.id}" → aliased bd/sd/hh`,
   )
@@ -306,26 +447,31 @@ async function loadMapKit(candidate: DrumKitCandidate): Promise<boolean> {
 }
 
 async function loadDirtAliasKit(id: string): Promise<boolean> {
-  const probe = joinUrl(DIRT_BASE, 'bd/BT0A0A7.wav')
-  if (!(await probeAudioUrl(probe))) {
+  const map: Record<string, string[]> = {
+    bd: ['bd/BT0A0A7.wav', 'bd/BT0A0D0.wav'],
+    sd: DIRT_SD,
+    hh: DIRT_HH,
+    ch: DIRT_HH,
+    cp: ['cp/HANDCLP0.wav'],
+    oh: ['808oh/OH00.WAV'],
+    rim: ['cb/rytm-cb.wav'],
+    sh: ['perc/000_perc0.wav'],
+  }
+  const filtered: Record<string, string[]> = {}
+  for (const [key, paths] of Object.entries(map)) {
+    const good: string[] = []
+    for (const path of paths) {
+      if (await probeAudioUrl(joinUrl(DIRT_BASE, path))) good.push(path)
+    }
+    if (good.length) filtered[key] = good
+  }
+  if (!filtered.bd?.length) {
     console.warn(`[beat-studio] drum kit "${id}" audio probe failed`)
     return false
   }
-  await samples(
-    {
-      bd: ['bd/BT0A0A7.wav', 'bd/BT0A0D0.wav'],
-      sd: DIRT_SD,
-      hh: DIRT_HH,
-      ch: DIRT_HH,
-      cp: ['cp/HANDCLP0.wav'],
-      oh: ['808oh/OH00.WAV'],
-      rim: ['cb/rytm-cb.wav'],
-      sh: ['perc/000_perc0.wav'],
-    },
-    DIRT_BASE,
-    { prebake: true },
-  )
+  await samples(filtered, DIRT_BASE, { prebake: true })
   drumPlayback = { id, mode: 'alias' }
+  preloadedDrumId = null
   console.info(`[beat-studio] drums ready via "${id}" (dirt alias)`)
   return true
 }
@@ -343,11 +489,19 @@ function candidatesForBank(bank: string | undefined): DrumKitCandidate[] {
  * Re-loads when the bank changes.
  */
 export async function ensureDrumBank(bank: string): Promise<DrumPlayback | null> {
-  if (drumPlayback && loadedDrumBank === bank) return drumPlayback
+  if (drumPlayback && loadedDrumBank === bank) {
+    const ok = await preloadDrumBuffers()
+    if (ok) return drumPlayback
+    // Aliases may have been clobbered (e.g. Dirt index) — reload.
+    drumPlayback = null
+    loadedDrumBank = null
+    preloadedDrumId = null
+  }
   const previous = drumPlayback
   const previousBank = loadedDrumBank
   drumPlayback = null
   loadedDrumBank = null
+  preloadedDrumId = null
 
   for (const candidate of candidatesForBank(bank)) {
     try {
@@ -357,7 +511,9 @@ export async function ensureDrumBank(bank: string): Promise<DrumPlayback | null>
           : await loadMapKit(candidate)
       if (ok) {
         loadedDrumBank = bank
-        return drumPlayback
+        const preloaded = await preloadDrumBuffers(true)
+        if (preloaded) return drumPlayback
+        console.warn(`[beat-studio] kit "${candidate.id}" registered but buffers not ready`)
       }
     } catch (err) {
       console.warn(`[beat-studio] drum kit "${candidate.id}" error`, err)
@@ -370,6 +526,7 @@ export async function ensureDrumBank(bank: string): Promise<DrumPlayback | null>
     console.warn(
       `[beat-studio] could not load kit for bank "${bank}" — keeping "${drumPlayback.id}"`,
     )
+    await preloadDrumBuffers(true)
     return drumPlayback
   }
 
@@ -379,7 +536,13 @@ export async function ensureDrumBank(bank: string): Promise<DrumPlayback | null>
 
 /** Try each drum kit until audio actually loads. */
 export async function loadDrumKitsUntilReady(): Promise<DrumPlayback | null> {
-  if (drumPlayback) return drumPlayback
+  if (drumPlayback) {
+    const ok = await preloadDrumBuffers()
+    if (ok) return drumPlayback
+    drumPlayback = null
+    loadedDrumBank = null
+    preloadedDrumId = null
+  }
 
   for (const candidate of DRUM_KIT_CANDIDATES) {
     try {
@@ -387,7 +550,11 @@ export async function loadDrumKitsUntilReady(): Promise<DrumPlayback | null> {
         candidate.kind === 'inline'
           ? await loadInlineKit(candidate)
           : await loadMapKit(candidate)
-      if (ok) return drumPlayback
+      if (ok) {
+        const preloaded = await preloadDrumBuffers(true)
+        if (preloaded) return drumPlayback
+        console.warn(`[beat-studio] kit "${candidate.id}" registered but buffers not ready`)
+      }
     } catch (err) {
       console.warn(`[beat-studio] drum kit "${candidate.id}" error`, err)
     }
@@ -420,12 +587,21 @@ export async function ensureStrudel(): Promise<void> {
     await initStrudel({
       prebake: async () => {
         await registerStrudelSounds()
-        // Drums first — melodic layers can load while the user tweaks the beat.
+        // Drums first so bd/sd/hh point at a known-good kit.
         await loadDrumKitsUntilReady()
         await Promise.all([
           loadSampleBank('piano', 'piano.json', { prebake: true }),
           loadSampleBank('vcsl', 'vcsl.json', { prebake: false }),
         ])
+        // Dirt index overwrites drum names — restore + re-decode when it finishes.
+        dirtSettle = loadDirtSampleIndex()
+          .then(async (loaded) => {
+            if (!loaded) return
+            await reassertDrumKit()
+          })
+          .catch((err) => {
+            console.warn('[beat-studio] Dirt settle failed', err)
+          })
       },
     })
   })()
@@ -472,10 +648,26 @@ export function stopCode(): void {
  */
 export async function playCode(code: string, drumBank?: string): Promise<void> {
   await ensureStrudel()
+  // Wait briefly for Dirt index (it clobbers bd/sd/hh) so we restore before Play.
+  if (dirtSettle) {
+    await Promise.race([
+      dirtSettle,
+      new Promise<void>((resolve) => setTimeout(resolve, 4000)),
+    ])
+  }
   if (drumBank) {
     await ensureDrumBank(drumBank)
   } else if (!getDrumPlayback()) {
     await loadDrumKitsUntilReady()
+  }
+  // Decode buffers before starting the clock so the first kick isn't skipped.
+  const readyDrums = await preloadDrumBuffers(true)
+  if (!readyDrums) {
+    await reassertDrumKit()
+    const retry = await preloadDrumBuffers(true)
+    if (!retry) {
+      throw new Error('Drum samples failed to decode. Check your network, then press Play again.')
+    }
   }
   try {
     const ac = getAudioContext()

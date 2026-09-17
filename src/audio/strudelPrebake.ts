@@ -6,8 +6,11 @@ const DOUGH_JSdelivr = 'https://cdn.jsdelivr.net/gh/felixroos/dough-samples@main
 
 let registered = false
 
-/** Optional Dirt name index (crackle-adjacent FX, casio, etc.) — never block playback. */
-async function loadDirtSampleIndex(): Promise<void> {
+/**
+ * Optional Dirt name index (crackle / casio / etc.).
+ * Caller must reassert drum aliases afterward — this map overwrites bd/sd/hh.
+ */
+export async function loadDirtSampleIndex(): Promise<boolean> {
   const candidates = [
     `${DOUGH_RAW}/Dirt-Samples.json`,
     'github:tidalcycles/dirt-samples',
@@ -17,7 +20,7 @@ async function loadDirtSampleIndex(): Promise<void> {
     try {
       await samples(url, '', { prebake: false })
       console.info(`[beat-studio] Dirt sample index loaded from ${url}`)
-      return
+      return true
     } catch (err) {
       console.warn(`[beat-studio] Dirt sample index failed (${url})`, err)
     }
@@ -25,11 +28,12 @@ async function loadDirtSampleIndex(): Promise<void> {
   console.warn(
     '[beat-studio] Dirt sample index unavailable — synth/GM/drums still work; named Dirt samples may be missing.',
   )
+  return false
 }
 
 /**
- * Match strudel.cc REPL: oscillators, noise, zzfx, GM soundfonts (CDN),
- * and the Dirt sample index when the network allows.
+ * Match strudel.cc REPL: oscillators, noise, zzfx, GM soundfonts (CDN).
+ * Dirt index is loaded separately so drum kits can win the bd/sd/hh names.
  */
 export async function registerStrudelSounds(): Promise<void> {
   if (registered) return
@@ -40,7 +44,5 @@ export async function registerStrudelSounds(): Promise<void> {
   } catch (err) {
     console.warn('[beat-studio] GM soundfonts failed to register', err)
   }
-  // Never block audio startup on the huge Dirt index (can hang or clobber bd/sd/hh).
-  void loadDirtSampleIndex()
   registered = true
 }

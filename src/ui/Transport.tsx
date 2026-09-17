@@ -20,13 +20,15 @@ export function Transport() {
   const stop = useBeatStore((s) => s.stop)
   const exportLoop = useBeatStore((s) => s.exportLoop)
   const stopExport = useBeatStore((s) => s.stopExport)
+  const cancelExport = useBeatStore((s) => s.cancelExport)
   const exporting = useBeatStore((s) => s.exporting)
+  const exportMode = useBeatStore((s) => s.exportMode)
   const exportLabel = useBeatStore((s) => s.exportLabel)
   const error = useBeatStore((s) => s.error)
 
   const plan = planExport(beat, selectedLength)
   const indefinite = selectedLength === 'indefinite'
-  const recordingOpenEnded = exporting && indefinite
+  const recordingOpenEnded = exporting && exportMode === 'live'
 
   useEffect(() => {
     if (!recordingOpenEnded) {
@@ -117,28 +119,32 @@ export function Transport() {
             <Square className="h-3 w-3 fill-current" />
             Stop & save
           </button>
+        ) : exporting ? (
+          <button
+            type="button"
+            onClick={() => cancelExport()}
+            className="inline-flex items-center gap-1.5 rounded-full border border-wood/30 bg-cream px-3.5 py-1.5 text-xs font-semibold text-ink-soft hover:bg-cream/80"
+          >
+            Cancel
+          </button>
         ) : (
           <button
             type="button"
             title={formatExportPlan(plan)}
-            disabled={exporting}
             onClick={() => void exportLoop(selectedLength)}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition',
-              exporting
-                ? 'cursor-wait border-red-200 bg-red-50 text-red-800'
-                : 'border-wood/30 bg-ink text-cream hover:bg-ink-soft',
-            )}
+            className="inline-flex items-center gap-1.5 rounded-full border border-wood/30 bg-ink px-3.5 py-1.5 text-xs font-semibold text-cream transition hover:bg-ink-soft"
           >
-            <Circle
-              className={cn(
-                'h-3 w-3',
-                exporting ? 'fill-red-600 text-red-600' : 'fill-red-500 text-red-500',
-              )}
-            />
-            {exporting ? 'Recording…' : 'Record'}
+            <Circle className="h-3 w-3 fill-red-500 text-red-500" />
+            Record
           </button>
         )}
+
+        {exporting && exportMode === 'fixed' ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-800">
+            <Circle className="h-3 w-3 fill-red-600 text-red-600" />
+            Recording…
+          </span>
+        ) : null}
 
         {!exporting ? (
           <span className="text-[11px] text-muted" title={formatExportPlan(plan)}>

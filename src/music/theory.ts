@@ -187,8 +187,8 @@ export function delayTimes(bpm: number) {
   }
 }
 
-/** Default for new beats — long enough that the repeat is easy to miss. */
-export const DEFAULT_PROGRESSION_ID = 'journey'
+/** Default for new beats — 4 bars so Record 1× stays a short, usable loop. */
+export const DEFAULT_PROGRESSION_ID = 'anthem'
 
 /**
  * Selectable chord progressions. One chord per cycle, so the list length is

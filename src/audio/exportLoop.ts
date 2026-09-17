@@ -19,6 +19,7 @@ type LiveRecording = {
   startedAt: number
   ac: AudioContext
   stopPromise: Promise<Blob>
+  aborted: boolean
 }
 
 let live: LiveRecording | null = null
@@ -47,15 +48,18 @@ function ensureRecordTap(ac: AudioContext): MediaStreamAudioDestinationNode {
   if (!master) {
     throw new Error('Audio output is not ready yet. Press Play once, then try again.')
   }
+  if (master.context !== ac) {
+    throw new Error('Audio context mismatch. Press Play once, then try Record again.')
+  }
 
   if (tapDest && tapGain === master && tapDest.context === ac) {
     return tapDest
   }
 
   try {
-    tapDest?.disconnect()
+    if (tapGain && tapDest) tapGain.disconnect(tapDest)
   } catch {
-    // ignore
+    // ignore — node may already be disconnected after a graph reset
   }
 
   tapDest = ac.createMediaStreamDestination()
@@ -66,8 +70,12 @@ function ensureRecordTap(ac: AudioContext): MediaStreamAudioDestinationNode {
 
 function waitAudioSeconds(ac: AudioContext, seconds: number): Promise<void> {
   const end = ac.currentTime + seconds
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const tick = () => {
+      if (live?.aborted) {
+        reject(new Error('Recording cancelled.'))
+        return
+      }
       if (ac.currentTime >= end) {
         resolve()
         return
@@ -93,26 +101,54 @@ function createRecorder(ac: AudioContext): LiveRecording {
     if (e.data.size > 0) chunks.push(e.data)
   }
 
-  const stopPromise = new Promise<Blob>((resolve, reject) => {
-    recorder.onerror = (ev) =>
-      reject(ev.error ?? new Error(ev.message || 'Recording failed'))
-    recorder.onstop = () => {
-      const type = recorder.mimeType || mimeType || 'audio/webm'
-      resolve(new Blob(chunks, { type }))
-    }
-  })
-
-  return {
+  const session: LiveRecording = {
     recorder,
     chunks,
     mimeType: mimeType || 'audio/webm',
     extension,
     startedAt: ac.currentTime,
     ac,
-    stopPromise,
+    stopPromise: undefined as unknown as Promise<Blob>,
+    aborted: false,
   }
-}
 
+  session.stopPromise = new Promise<Blob>((resolve, reject) => {
+    let settled = false
+    const fail = (err: Error) => {
+      if (settled) return
+      settled = true
+      reject(err)
+    }
+    const succeed = (blob: Blob) => {
+      if (settled) return
+      settled = true
+      resolve(blob)
+    }
+
+    recorder.onerror = (ev) => {
+      const err =
+        ev.error instanceof Error
+          ? ev.error
+          : new Error(ev.message || 'Recording failed')
+      fail(err)
+    }
+    recorder.onstop = () => {
+      if (session.aborted) {
+        fail(new Error('Recording cancelled.'))
+        return
+      }
+      const type = recorder.mimeType || mimeType || 'audio/webm'
+      const blob = new Blob(chunks, { type })
+      if (blob.size < 256) {
+        fail(new Error('Recording was empty. Press Play once, then try Record again.'))
+        return
+      }
+      succeed(blob)
+    }
+  })
+
+  return session
+}
 /**
  * Record the live Strudel mix for an exact duration (pass a cycle-multiple
  * length so the file loops without a seam).
@@ -130,21 +166,33 @@ export async function recordLoopAudio(seconds: number): Promise<RecordLoopResult
 
   const session = createRecorder(ac)
   live = session
-  session.recorder.start(100)
 
   try {
+    session.recorder.start(100)
+    // Let the pattern speak before we count duration from silence.
+    await waitAudioSeconds(ac, 0.12)
+    session.startedAt = ac.currentTime
     await waitAudioSeconds(ac, seconds)
-  } finally {
-    if (session.recorder.state !== 'inactive') session.recorder.stop()
-    live = null
-  }
 
-  const blob = await session.stopPromise
-  return {
-    blob,
-    mimeType: blob.type || session.mimeType,
-    extension: session.extension,
-    seconds,
+    if (session.recorder.state !== 'inactive') session.recorder.stop()
+    if (live === session) live = null
+    const blob = await session.stopPromise
+    return {
+      blob,
+      mimeType: blob.type || session.mimeType,
+      extension: session.extension,
+      seconds,
+    }
+  } catch (err) {
+    session.aborted = true
+    if (live === session) live = null
+    try {
+      if (session.recorder.state !== 'inactive') session.recorder.stop()
+    } catch {
+      // ignore
+    }
+    void session.stopPromise.catch(() => {})
+    throw err
   }
 }
 
@@ -157,7 +205,19 @@ export async function startLiveRecording(): Promise<void> {
   if (ac.state === 'suspended') await ac.resume()
   const session = createRecorder(ac)
   live = session
-  session.recorder.start(250)
+  try {
+    session.recorder.start(250)
+    await waitAudioSeconds(ac, 0.12)
+    session.startedAt = ac.currentTime
+  } catch (err) {
+    live = null
+    try {
+      if (session.recorder.state !== 'inactive') session.recorder.stop()
+    } catch {
+      // ignore
+    }
+    throw err
+  }
 }
 
 export function isLiveRecording(): boolean {
@@ -187,7 +247,7 @@ export async function stopLiveRecordingAligned(cycleSeconds: number): Promise<Re
     await waitAudioSeconds(session.ac, remaining)
   }
   const finalElapsed = Math.max(0, session.ac.currentTime - session.startedAt)
-  live = null
+  if (live === session) live = null
   if (session.recorder.state !== 'inactive') session.recorder.stop()
   const blob = await session.stopPromise
   const finalLoops = Math.max(1, Math.round(finalElapsed / unit))
@@ -206,7 +266,7 @@ export async function stopLiveRecording(): Promise<RecordLoopResult> {
     throw new Error('Not recording.')
   }
   const elapsed = Math.max(0, session.ac.currentTime - session.startedAt)
-  live = null
+  if (live === session) live = null
   if (session.recorder.state !== 'inactive') session.recorder.stop()
   const blob = await session.stopPromise
   return {
@@ -221,6 +281,7 @@ export async function stopLiveRecording(): Promise<RecordLoopResult> {
 export function cancelLiveRecording(): void {
   const session = live
   if (!session) return
+  session.aborted = true
   live = null
   try {
     if (session.recorder.state !== 'inactive') session.recorder.stop()

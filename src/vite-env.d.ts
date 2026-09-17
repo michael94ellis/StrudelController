@@ -34,6 +34,21 @@ declare module '@strudel/web' {
   export function getAudioContext(): AudioContext
 
   export function resetGlobalEffects(): void
+
+  /** Resolve a registered sound (sample bank, synth, etc.). */
+  export function getSound(name: string): {
+    data?: { type?: string; samples?: unknown }
+  } | undefined
+
+  /** Fetch + decode a sample URL into Strudel's buffer cache. */
+  export function loadBuffer(
+    url: string,
+    ac: AudioContext,
+    label?: string,
+    index?: number,
+  ): Promise<AudioBuffer>
+
+  export function getLoadedBuffer(url: string): AudioBuffer | undefined
 }
 
 declare module 'superdough' {

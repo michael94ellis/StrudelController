@@ -20,7 +20,7 @@ export const trap: GenreModule = {
   key: 'C',
   scale: 'minor',
   swing: SWUNG,
-  defaultProgressionId: 'journey',
+  defaultProgressionId: 'anthem',
 
   generators: {
     /** Trap: half-time snare, syncopated 808 kicks, rolling 16th hats */

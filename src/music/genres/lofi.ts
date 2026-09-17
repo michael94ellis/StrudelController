@@ -18,7 +18,7 @@ export const lofi: GenreModule = {
   key: 'Bb',
   scale: 'major',
   swing: SWUNG,
-  defaultProgressionId: 'journey',
+  defaultProgressionId: 'anthem',
 
   generators: {
     /** Lo-fi / dusty boom-bap pocket */

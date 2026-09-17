@@ -8,7 +8,7 @@ import { migrateMelodyFlavorIds } from './melodyFlavors'
 import { withStrudelDefaults } from './strudelSounds'
 
 const STORAGE_KEY = 'beat-studio:beats'
-const STORAGE_VERSION = 14
+const STORAGE_VERSION = 15
 
 export type BeatLibrary = {
   version: number
@@ -122,6 +122,22 @@ function migrateBeat(beat: LegacyBeat, fromVersion: number): Beat {
       b = { ...applyGenre(b as Beat, 'house'), name: b.name, progressionId: b.progressionId }
     }
     b = { ...b, variation: b.variation ?? 0 }
+  }
+  if (fromVersion < 15) {
+    // Old default was 16-bar "journey", which made Record 1× ~30s. Keep intentional
+    // Long-loop moods; shrink everything else to a 4-bar cycle.
+    const longDegrees = ['deg:vi', 'deg:IV', 'deg:I', 'deg:V']
+    b = {
+      ...b,
+      layers: b.layers.map((layer) => {
+        if ((layer.chordLength ?? 4) !== 16) return layer
+        const ids = layer.chordStyleIds ?? []
+        const isLongMood =
+          ids.length === longDegrees.length && longDegrees.every((d) => ids.includes(d))
+        if (isLongMood) return layer
+        return { ...layer, chordLength: 4 as const }
+      }),
+    }
   }
 
   return finalizeBeat(b)

@@ -25,7 +25,7 @@ export const house: GenreModule = {
   key: 'A',
   scale: 'minor',
   swing: SWUNG,
-  defaultProgressionId: 'journey',
+  defaultProgressionId: 'anthem',
 
   generators: {
     /** Club kit: 4-on-floor kick, clap on 2/4, straight 8th hats (no ghost kicks / offbeat lanes). */
