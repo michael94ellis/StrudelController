@@ -1,6 +1,8 @@
 import type { GeneratorName, HarmonyCtx, ParamMap, ParamSchema } from '../types'
 import { num, str } from '../types'
+import { composeBassPattern, DEFAULT_BASS_FLAVOR_IDS } from '../bassFlavors'
 import { composeDrumPattern, DEFAULT_DRUM_FLAVOR_IDS } from '../drumFlavors'
+import { composeMelodyPattern, DEFAULT_MELODY_FLAVOR_IDS } from '../melodyFlavors'
 import { drumMini } from '../drums'
 import { notePerBar, notePerBarStruct } from '../pattern'
 import { pickBar } from '../variation'
@@ -37,6 +39,36 @@ export const coreGenerators = {
       if (!raw.trim()) return 'silence'
       const ids = raw.split(',').map((s) => s.trim()).filter(Boolean)
       return composeDrumPattern(ids)
+    },
+  },
+
+  /** Bass vibe pills — riff + rhythm + height (see `bassFlavors.ts`). */
+  bassCompose: {
+    name: 'bassCompose',
+    label: 'Bass',
+    suits: ['subBass'],
+    defaultParams: { flavorIds: DEFAULT_BASS_FLAVOR_IDS.join(',') },
+    schema: [],
+    generate: (ctx, params) => {
+      const raw = str(params, 'flavorIds', '')
+      if (!raw.trim()) return 'silence'
+      const ids = raw.split(',').map((s) => s.trim()).filter(Boolean)
+      return composeBassPattern(ctx, ids)
+    },
+  },
+
+  /** Melodic vibe pills for keys / leads / pads (see `melodyFlavors.ts`). */
+  melodyCompose: {
+    name: 'melodyCompose',
+    label: 'Melody',
+    suits: ['pluck', 'piano', 'pad', 'lead', 'bell', 'texture', 'guitar'],
+    defaultParams: { flavorIds: DEFAULT_MELODY_FLAVOR_IDS.join(',') },
+    schema: [],
+    generate: (ctx, params) => {
+      const raw = str(params, 'flavorIds', '')
+      if (!raw.trim()) return 'silence'
+      const ids = raw.split(',').map((s) => s.trim()).filter(Boolean)
+      return composeMelodyPattern(ctx, ids)
     },
   },
 

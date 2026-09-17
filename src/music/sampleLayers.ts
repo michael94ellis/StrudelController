@@ -1,6 +1,6 @@
 import type { BeatLayer, InstrumentKind } from './types'
 import { DRUM_BANK_OPTIONS, type DrumBankId } from './drums'
-import { defaultLayer, generatorsFor, withKind } from './beats/build'
+import { defaultLayer, withKind } from './beats/build'
 import { patternStyleIdsForLayer } from './layerStyles'
 import { instrumentDefs } from './instruments/registry'
 import {
@@ -136,16 +136,31 @@ export function layerInstrumentSchema(kind: InstrumentKind) {
   )
 }
 
+/** Sample catalog categories that fit a track kind (for row pickers). */
+export function sampleGroupsForKind(kind: InstrumentKind): SampleOptionGroup[] {
+  const labels: Record<InstrumentKind, string[]> = {
+    drumkit: ['Drums'],
+    subBass: ['Bass'],
+    piano: ['Keys'],
+    lead: ['Synths', 'Horns'],
+    pad: ['Pads', 'Strings'],
+    pluck: ['Pluck & bells'],
+    bell: ['Pluck & bells'],
+    guitar: ['Guitar'],
+    texture: ['Texture', 'World'],
+  }
+  const allow = new Set(labels[kind] ?? [])
+  return SAMPLE_OPTION_GROUPS.filter((g) => allow.has(g.label))
+}
+
 export function applySampleToLayer(layer: BeatLayer, sampleId: string): BeatLayer {
   if (isDrumSampleId(sampleId)) {
     const bank = drumBankFromSampleId(sampleId) ?? 'RolandTR909'
     const base = withKind(layer, 'drumkit')
-    const generators = generatorsFor('drumkit')
-    const generator = generators.includes(base.generator) ? base.generator : generators[0]
     const patternStyleIds =
       layer.kind === 'drumkit' && layer.patternStyleIds?.length
         ? layer.patternStyleIds
-        : patternStyleIdsForLayer(generator, 'drumkit')
+        : patternStyleIdsForLayer('drumCompose', 'drumkit')
     return {
       ...base,
       generator: 'drumCompose',
@@ -163,11 +178,29 @@ export function applySampleToLayer(layer: BeatLayer, sampleId: string): BeatLaye
 
   const kind = kindForSample(sampleId)
   const base = withKind(layer, kind)
-  const generators = generatorsFor(kind)
-  const generator = generators.includes(base.generator) ? base.generator : generators[0]
+  const keepFlavors =
+    layer.kind === kind &&
+    layer.patternStyleIds?.length &&
+    (kind === 'subBass' ||
+      kind === 'pluck' ||
+      kind === 'piano' ||
+      kind === 'pad' ||
+      kind === 'lead' ||
+      kind === 'bell' ||
+      kind === 'texture' ||
+      kind === 'guitar')
+  const patternStyleIds = keepFlavors
+    ? layer.patternStyleIds!
+    : patternStyleIdsForLayer(
+        kind === 'subBass' ? 'bassCompose' : 'melodyCompose',
+        kind,
+      )
+  const generator = kind === 'subBass' ? 'bassCompose' : 'melodyCompose'
   return {
     ...base,
     generator,
+    params: { flavorIds: patternStyleIds.join(',') },
+    patternStyleIds,
     instrumentParams: {
       ...instrumentDefs[kind].defaultParams,
       ...base.instrumentParams,

@@ -9,6 +9,20 @@ import {
   flavorsInSection,
   migrateDrumFlavorIds,
 } from './drumFlavors'
+import {
+  BASS_FLAVOR_SECTIONS,
+  bassFlavorSummary,
+  bassFlavorsForGenerator,
+  bassFlavorsInSection,
+  migrateBassFlavorIds,
+} from './bassFlavors'
+import {
+  MELODY_FLAVOR_SECTIONS,
+  melodyFlavorSummary,
+  melodyFlavorsForGenerator,
+  melodyFlavorsInSection,
+  migrateMelodyFlavorIds,
+} from './melodyFlavors'
 
 export type ChordLoopLength = 4 | 8 | 16
 
@@ -36,23 +50,6 @@ export type ChordDegreeToggle = {
   chord: ChordSpec
 }
 
-const BASS_STYLES: PatternStyleOption[] = [
-  { id: 'bass:root', label: 'Root notes', generator: 'rootBass' },
-  { id: 'bass:walk', label: 'Walking', generator: 'walkingBass' },
-  { id: 'bass:house', label: 'Pump', generator: 'houseBass' },
-  { id: 'bass:trap', label: '808 glide', generator: 'trapBass' },
-]
-
-const MELODY_STYLES: PatternStyleOption[] = [
-  { id: 'melody:stabs', label: 'Chord stabs', generator: 'chordStabs' },
-  { id: 'melody:houseStabs', label: 'EDM stabs', generator: 'houseStabs' },
-  { id: 'melody:arp', label: 'Arp up', generator: 'arpUp' },
-  { id: 'melody:phrase', label: 'Melody phrase', generator: 'melodyPhrase' },
-  { id: 'melody:improv', label: 'Improv', generator: 'improv' },
-  { id: 'melody:ambient', label: 'Ambient', generator: 'ambientGrain' },
-  { id: 'melody:chime', label: 'Chimes', generator: 'chimeHits' },
-]
-
 const DRUM_STYLE_GROUPS: PatternStyleGroup[] = DRUM_FLAVOR_SECTIONS.map((section) => ({
   id: `drum:${section.id}`,
   label: section.label,
@@ -64,16 +61,40 @@ const DRUM_STYLE_GROUPS: PatternStyleGroup[] = DRUM_FLAVOR_SECTIONS.map((section
   })),
 }))
 
+const BASS_STYLE_GROUPS: PatternStyleGroup[] = BASS_FLAVOR_SECTIONS.map((section) => ({
+  id: `bass:${section.id}`,
+  label: section.label,
+  exclusive: true,
+  allowOff: true,
+  options: bassFlavorsInSection(section.id).map((f) => ({
+    id: f.id,
+    label: f.label,
+    generator: 'bassCompose' as const,
+  })),
+}))
+
+const MELODY_STYLE_GROUPS: PatternStyleGroup[] = MELODY_FLAVOR_SECTIONS.map((section) => ({
+  id: `mel:${section.id}`,
+  label: section.label,
+  exclusive: true,
+  allowOff: true,
+  options: melodyFlavorsInSection(section.id).map((f) => ({
+    id: f.id,
+    label: f.label,
+    generator: 'melodyCompose' as const,
+  })),
+}))
+
 export const PATTERN_STYLE_GROUPS: Partial<Record<InstrumentKind, PatternStyleGroup[]>> = {
   drumkit: DRUM_STYLE_GROUPS,
-  subBass: [{ id: 'bass', label: 'Bass line', options: BASS_STYLES }],
-  pluck: [{ id: 'melody', label: 'Pattern', options: MELODY_STYLES }],
-  piano: [{ id: 'melody', label: 'Pattern', options: MELODY_STYLES }],
-  pad: [{ id: 'melody', label: 'Pattern', options: MELODY_STYLES }],
-  lead: [{ id: 'melody', label: 'Pattern', options: MELODY_STYLES }],
-  bell: [{ id: 'melody', label: 'Pattern', options: MELODY_STYLES }],
-  texture: [{ id: 'melody', label: 'Pattern', options: MELODY_STYLES }],
-  guitar: [{ id: 'melody', label: 'Pattern', options: MELODY_STYLES }],
+  subBass: BASS_STYLE_GROUPS,
+  pluck: MELODY_STYLE_GROUPS,
+  piano: MELODY_STYLE_GROUPS,
+  pad: MELODY_STYLE_GROUPS,
+  lead: MELODY_STYLE_GROUPS,
+  bell: MELODY_STYLE_GROUPS,
+  texture: MELODY_STYLE_GROUPS,
+  guitar: MELODY_STYLE_GROUPS,
 }
 
 export const CHORD_LOOP_LENGTHS: ChordLoopLength[] = [4, 8, 16]
@@ -89,15 +110,30 @@ export const CHORD_DEGREE_TOGGLES: ChordDegreeToggle[] = [
 
 const DEGREE_ORDER = CHORD_DEGREE_TOGGLES.map((t) => t.id)
 
+/** Friendly mood pills for non-musicians (maps to chord craft under the hood). */
 export const CHORD_PRESETS: Array<{ id: string; label: string; degrees: string[]; length: ChordLoopLength }> =
   [
     { id: 'preset:pop', label: 'Pop', degrees: ['deg:I', 'deg:vi', 'deg:IV', 'deg:V'], length: 4 },
     { id: 'preset:anthem', label: 'Anthem', degrees: ['deg:I', 'deg:V', 'deg:vi', 'deg:IV'], length: 4 },
-    { id: 'preset:jazz', label: 'Jazz', degrees: ['deg:ii', 'deg:V', 'deg:I', 'deg:vi'], length: 4 },
-    { id: 'preset:minor', label: 'Minor', degrees: ['deg:vi', 'deg:IV', 'deg:I', 'deg:V'], length: 4 },
+    { id: 'preset:jazz', label: 'Jazzy', degrees: ['deg:ii', 'deg:V', 'deg:I', 'deg:vi'], length: 4 },
+    { id: 'preset:minor', label: 'Moody', degrees: ['deg:vi', 'deg:IV', 'deg:I', 'deg:V'], length: 4 },
     { id: 'preset:drone', label: 'Drone', degrees: ['deg:I'], length: 4 },
-    { id: 'preset:long', label: 'Long', degrees: ['deg:vi', 'deg:IV', 'deg:I', 'deg:V'], length: 16 },
+    { id: 'preset:long', label: 'Long loop', degrees: ['deg:vi', 'deg:IV', 'deg:I', 'deg:V'], length: 16 },
   ]
+
+const MELODIC_KINDS = new Set<InstrumentKind>([
+  'pluck',
+  'piano',
+  'pad',
+  'lead',
+  'bell',
+  'texture',
+  'guitar',
+])
+
+export function isMelodicKind(kind: InstrumentKind): boolean {
+  return MELODIC_KINDS.has(kind)
+}
 
 const patternOptionById = new Map<string, PatternStyleOption>()
 for (const groups of Object.values(PATTERN_STYLE_GROUPS)) {
@@ -114,11 +150,17 @@ export function patternStyleIdForGenerator(generator: GeneratorName, kind: Instr
   if (kind === 'drumkit') {
     return drumFlavorsForGenerator(generator)[0] ?? DEFAULT_DRUM_FLAVOR_IDS[0]
   }
+  if (kind === 'subBass') {
+    return bassFlavorsForGenerator(generator)[0] ?? 'bass:riff:pulse'
+  }
+  if (isMelodicKind(kind)) {
+    return melodyFlavorsForGenerator(generator)[0] ?? 'mel:riff:strum'
+  }
   for (const g of patternGroupsForKind(kind)) {
     const match = g.options.find((o) => o.generator === generator)
     if (match) return match.id
   }
-  return patternGroupsForKind(kind)[0]?.options[0]?.id ?? 'melody:stabs'
+  return patternGroupsForKind(kind)[0]?.options[0]?.id ?? 'mel:riff:strum'
 }
 
 /** Default patternStyleIds when creating / migrating a layer. */
@@ -127,6 +169,8 @@ export function patternStyleIdsForLayer(
   kind: InstrumentKind,
 ): string[] {
   if (kind === 'drumkit') return drumFlavorsForGenerator(generator)
+  if (kind === 'subBass') return bassFlavorsForGenerator(generator)
+  if (isMelodicKind(kind)) return melodyFlavorsForGenerator(generator)
   return [patternStyleIdForGenerator(generator, kind)]
 }
 
@@ -190,6 +234,22 @@ export function resolvePattern(layer: BeatLayer): { generator: GeneratorName; pa
     }
   }
 
+  if (layer.kind === 'subBass') {
+    const flavorIds = migrateBassFlavorIds(layer.patternStyleIds)
+    return {
+      generator: 'bassCompose',
+      params: { flavorIds: flavorIds.join(',') },
+    }
+  }
+
+  if (isMelodicKind(layer.kind)) {
+    const flavorIds = migrateMelodyFlavorIds(layer.patternStyleIds)
+    return {
+      generator: 'melodyCompose',
+      params: { flavorIds: flavorIds.join(',') },
+    }
+  }
+
   const groups = patternGroupsForKind(layer.kind)
   const activeIds = layer.patternStyleIds ?? []
   let generator = layer.generator
@@ -211,12 +271,25 @@ export function resolvePattern(layer: BeatLayer): { generator: GeneratorName; pa
 
 export function chordCraftSummary(layer: BeatLayer): string {
   const prog = resolveProgression(layer)
-  return `${prog.chords.length}b · ${prog.label}`
+  const mood = CHORD_PRESETS.find(
+    (p) =>
+      p.length === (layer.chordLength ?? 4) &&
+      p.degrees.length === (layer.chordStyleIds?.length ?? 0) &&
+      p.degrees.every((d, i) => layer.chordStyleIds?.[i] === d),
+  )
+  if (mood) return mood.label
+  return `${prog.chords.length}b`
 }
 
 export function patternStyleSummary(layer: BeatLayer): string {
   if (layer.kind === 'drumkit') {
-    return drumFlavorSummary(layer.patternStyleIds ?? [])
+    return drumFlavorSummary(layer.patternStyleIds)
+  }
+  if (layer.kind === 'subBass') {
+    return bassFlavorSummary(layer.patternStyleIds)
+  }
+  if (isMelodicKind(layer.kind)) {
+    return melodyFlavorSummary(layer.patternStyleIds)
   }
   const { generator } = resolvePattern(layer)
   return generatorDefs[generator]?.label ?? layer.generator

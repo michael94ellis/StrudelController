@@ -1,12 +1,14 @@
 import type { Beat, BeatLayer } from './types'
 import { applyGenre, createBeat } from './beats/build'
 import { DEFAULT_PROGRESSION_ID, getProgression } from './theory'
-import { patternStyleIdsForLayer, progressionToChordStyles } from './layerStyles'
+import { patternStyleIdsForLayer, progressionToChordStyles, isMelodicKind } from './layerStyles'
 import { migrateDrumFlavorIds } from './drumFlavors'
+import { migrateBassFlavorIds } from './bassFlavors'
+import { migrateMelodyFlavorIds } from './melodyFlavors'
 import { withStrudelDefaults } from './strudelSounds'
 
 const STORAGE_KEY = 'beat-studio:beats'
-const STORAGE_VERSION = 13
+const STORAGE_VERSION = 14
 
 export type BeatLibrary = {
   version: number
@@ -43,18 +45,52 @@ function normalizeLayer(layer: LegacyLayer, beatProgressionId: string): BeatLaye
     layer.patternStyleIds?.length
       ? layer.patternStyleIds
       : patternStyleIdsForLayer(layer.generator, layer.kind)
+
   if (layer.kind === 'drumkit') {
     patternStyleIds = migrateDrumFlavorIds(patternStyleIds)
+    return {
+      ...rest,
+      progressionId,
+      patternStyleIds,
+      chordStyleIds: chord.chordStyleIds,
+      chordLength: chord.chordLength,
+      generator: 'drumCompose',
+      params: { flavorIds: patternStyleIds.join(',') },
+    }
   }
+
+  if (layer.kind === 'subBass') {
+    patternStyleIds = migrateBassFlavorIds(patternStyleIds)
+    return {
+      ...rest,
+      progressionId,
+      patternStyleIds,
+      chordStyleIds: chord.chordStyleIds,
+      chordLength: chord.chordLength,
+      generator: 'bassCompose',
+      params: { flavorIds: patternStyleIds.join(',') },
+    }
+  }
+
+  if (isMelodicKind(layer.kind)) {
+    patternStyleIds = migrateMelodyFlavorIds(patternStyleIds)
+    return {
+      ...rest,
+      progressionId,
+      patternStyleIds,
+      chordStyleIds: chord.chordStyleIds,
+      chordLength: chord.chordLength,
+      generator: 'melodyCompose',
+      params: { flavorIds: patternStyleIds.join(',') },
+    }
+  }
+
   return {
     ...rest,
     progressionId,
     patternStyleIds,
     chordStyleIds: chord.chordStyleIds,
     chordLength: chord.chordLength,
-    ...(layer.kind === 'drumkit'
-      ? { generator: 'drumCompose' as const, params: { flavorIds: patternStyleIds.join(',') } }
-      : {}),
   }
 }
 

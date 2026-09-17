@@ -7,6 +7,7 @@ import { withStrudelDefaults } from '../strudelSounds'
 import { GENRES, getGenre } from '../genres'
 import type { GenreLayer, GenreModule } from '../genres'
 import {
+  isMelodicKind,
   patternStyleIdsForLayer,
   progressionToChordStyles,
 } from '../layerStyles'
@@ -104,23 +105,31 @@ export function duplicateLayer(layer: BeatLayer): BeatLayer {
  */
 export function withKind(layer: BeatLayer, kind: InstrumentKind): BeatLayer {
   const def = instrumentDefs[kind]
-  const suits = generatorDefs[layer.generator]?.suits.includes(kind)
-  const generator = suits ? layer.generator : generatorsFor(kind)[0]
+  let generator: GeneratorName
+  if (kind === 'drumkit') generator = 'drumCompose'
+  else if (kind === 'subBass') generator = 'bassCompose'
+  else if (isMelodicKind(kind)) generator = 'melodyCompose'
+  else {
+    const suits = generatorDefs[layer.generator]?.suits.includes(kind)
+    generator = suits ? layer.generator : generatorsFor(kind)[0]
+  }
+  const patternStyleIds = patternStyleIdsForLayer(generator, kind)
   return {
     ...layer,
     kind,
     instrumentParams: { ...def.defaultParams },
     generator,
-    params: { ...generatorDefs[generator].defaultParams },
-    patternStyleIds: patternStyleIdsForLayer(generator, kind),
+    params: { flavorIds: patternStyleIds.join(',') },
+    patternStyleIds,
   }
 }
 
 export function withGenerator(layer: BeatLayer, generator: GeneratorName): BeatLayer {
+  const patternStyleIds = patternStyleIdsForLayer(generator, layer.kind)
   return {
     ...layer,
     generator,
-    params: { ...generatorDefs[generator].defaultParams },
-    patternStyleIds: patternStyleIdsForLayer(generator, layer.kind),
+    params: { flavorIds: patternStyleIds.join(',') },
+    patternStyleIds,
   }
 }

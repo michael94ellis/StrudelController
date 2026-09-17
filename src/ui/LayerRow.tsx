@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight, Copy, Trash2, Volume2, VolumeX } from 'lucide-react'
 import type { BeatLayer } from '../music/types'
 import { num } from '../music/types'
-import { chordCraftSummary, patternStyleSummary, resolveProgression } from '../music/layerStyles'
-import { getLayerSampleId, SAMPLE_OPTION_GROUPS } from '../music/sampleLayers'
+import { chordCraftSummary, isMelodicKind, patternStyleSummary } from '../music/layerStyles'
+import { getLayerSampleId, sampleGroupsForKind } from '../music/sampleLayers'
 import { useBeatStore } from '../store/beatStore'
 import { LayerPanel } from './LayerPanel'
 import { SampleSelect } from './controls/SampleSelect'
@@ -21,12 +21,10 @@ export function LayerRow({ layer }: Props) {
   const renameLayer = useBeatStore((s) => s.renameLayer)
 
   const isDrum = layer.kind === 'drumkit'
+  const showMoodSummary = layer.kind === 'subBass' || isMelodicKind(layer.kind)
   const sampleId = getLayerSampleId(layer)
-  const patternBars = resolveProgression(layer).chords.length
   const gain = num(layer.instrumentParams, 'gain', isDrum ? 0.85 : 0.5)
-  const sampleGroups = isDrum
-    ? SAMPLE_OPTION_GROUPS.filter((g) => g.label === 'Drums')
-    : SAMPLE_OPTION_GROUPS
+  const sampleGroups = sampleGroupsForKind(layer.kind)
 
   return (
     <article
@@ -68,31 +66,31 @@ export function LayerRow({ layer }: Props) {
             />
           </div>
 
-          {isDrum ? (
-            <label className="flex items-center gap-1.5 pl-0.5" title="Volume">
-              <span className="text-[10px] font-medium uppercase tracking-wide text-muted">Vol</span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={gain}
-                onChange={(e) => setInstrumentParam(layer.id, 'gain', Number(e.target.value))}
-                className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-paper-deep accent-amber"
-              />
-            </label>
-          ) : null}
+          <label className="flex items-center gap-1.5 pl-0.5" title="Volume">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted">Vol</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={gain}
+              onChange={(e) => setInstrumentParam(layer.id, 'gain', Number(e.target.value))}
+              className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-paper-deep accent-amber"
+            />
+          </label>
         </div>
 
         <span
           className="hidden max-w-[10rem] truncate text-xs text-muted sm:inline"
           title={
-            isDrum
-              ? patternStyleSummary(layer)
-              : `${patternStyleSummary(layer)} · ${chordCraftSummary(layer)}`
+            showMoodSummary
+              ? `${patternStyleSummary(layer)} · ${chordCraftSummary(layer)}`
+              : patternStyleSummary(layer)
           }
         >
-          {isDrum ? patternStyleSummary(layer) : `${patternStyleSummary(layer)} · ${patternBars}b`}
+          {showMoodSummary
+            ? `${patternStyleSummary(layer)} · ${chordCraftSummary(layer)}`
+            : patternStyleSummary(layer)}
         </span>
 
         <div className="min-w-[10rem] flex-1 basis-[12rem]">
@@ -102,7 +100,7 @@ export function LayerRow({ layer }: Props) {
             groups={sampleGroups}
             onChange={(id) => setLayerSample(layer.id, id)}
             filterable
-            placeholder={isDrum ? 'Drum kit…' : 'Sample…'}
+            placeholder="Sample…"
             className="[&>span:first-child]:hidden [&_input]:py-1.5 [&_select]:min-h-9 [&_select]:py-1.5"
           />
         </div>

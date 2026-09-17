@@ -65,6 +65,8 @@ export type InstrumentKind = keyof InstrumentKinds
  */
 export interface GeneratorNames {
   drumCompose: true
+  bassCompose: true
+  melodyCompose: true
   fourOnFloor: true
   breakbeat: true
   sparsePulse: true
