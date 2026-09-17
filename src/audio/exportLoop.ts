@@ -94,7 +94,8 @@ function createRecorder(ac: AudioContext): LiveRecording {
   }
 
   const stopPromise = new Promise<Blob>((resolve, reject) => {
-    recorder.onerror = () => reject(recorder.error ?? new Error('Recording failed'))
+    recorder.onerror = (ev) =>
+      reject(ev.error ?? new Error(ev.message || 'Recording failed'))
     recorder.onstop = () => {
       const type = recorder.mimeType || mimeType || 'audio/webm'
       resolve(new Blob(chunks, { type }))
