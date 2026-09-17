@@ -13,9 +13,8 @@ function vibeTitle(layer: BeatLayer): string {
   return 'Riff vibes'
 }
 
-function vibeHint(layer: BeatLayer): string {
-  if (layer.kind === 'drumkit') return 'Stack any mix — multiple per section is fine.'
-  return 'Pick one per section — they combine. Click again to clear.'
+function vibeHint(_layer: BeatLayer): string {
+  return 'Stack any mix — multiple per section is fine.'
 }
 
 export function LayerPanel({ layer }: Props) {

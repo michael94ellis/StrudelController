@@ -16,7 +16,7 @@ export const MELODY_FLAVOR_SECTIONS: Array<{ id: MelodyFlavorSection; label: str
   { id: 'height', label: 'Height' },
 ]
 
-/** Shared vibe pills for keys / synths / horns / pads / etc. */
+/** Shared vibe pills — multi-select within and across sections. */
 export const MELODY_FLAVORS: MelodyFlavor[] = [
   // Riff
   { id: 'mel:riff:strum', section: 'riff', label: 'Chord strum' },
@@ -64,16 +64,14 @@ export function melodyFlavorsInSection(section: MelodyFlavorSection): MelodyFlav
   return MELODY_FLAVORS.filter((f) => f.section === section)
 }
 
+/** Preserve order; keep multiples in the same section. */
 export function normalizeMelodyFlavorIds(ids: string[]): string[] {
-  const bySection = new Map<MelodyFlavorSection, string>()
+  const out: string[] = []
   for (const id of ids) {
-    const f = flavorById.get(id)
-    if (!f) continue
-    bySection.set(f.section, id)
+    if (!flavorById.has(id)) continue
+    if (!out.includes(id)) out.push(id)
   }
-  return MELODY_FLAVOR_SECTIONS.map((s) => bySection.get(s.id)).filter(
-    (id): id is string => Boolean(id),
-  )
+  return out
 }
 
 export function melodyFlavorsForGenerator(generator: GeneratorName): string[] {
@@ -111,11 +109,10 @@ export function migrateMelodyFlavorIds(ids: string[] | undefined): string[] {
     const mapped = LEGACY_TO_FLAVORS[id]
     if (mapped) expanded.push(...mapped)
   }
-  const normalized = normalizeMelodyFlavorIds(expanded)
-  return normalized.length ? normalized : [...DEFAULT_MELODY_FLAVOR_IDS]
+  return normalizeMelodyFlavorIds(expanded)
 }
 
-function octOf(heightId: string | undefined): number {
+function octOf(heightId: string): number {
   if (heightId === 'mel:height:low') return 3
   if (heightId === 'mel:height:high') return 5
   return 4
@@ -125,7 +122,7 @@ function withOct(note: string, oct: number): string {
   return note.replace(/\d+$/, String(oct))
 }
 
-function rhythmStruct(rhythmId: string | undefined): string {
+function rhythmStruct(rhythmId: string): string {
   switch (rhythmId) {
     case 'mel:rhythm:slow':
       return 'x ~ ~ ~'
@@ -139,14 +136,12 @@ function rhythmStruct(rhythmId: string | undefined): string {
   }
 }
 
-export function composeMelodyPattern(ctx: HarmonyCtx, flavorIds: string[] | undefined): string {
-  const ids = migrateMelodyFlavorIds(flavorIds)
-  if (!ids.length) return 'silence'
-
-  const riff = ids.find((id) => flavorById.get(id)?.section === 'riff')
-  const rhythm = ids.find((id) => flavorById.get(id)?.section === 'rhythm')
-  const height = ids.find((id) => flavorById.get(id)?.section === 'height')
-  const oct = octOf(height)
+function renderMelodyVoice(
+  ctx: HarmonyCtx,
+  riff: string,
+  rhythm: string,
+  oct: number,
+): string {
   const struct = rhythmStruct(rhythm)
 
   if (riff === 'mel:riff:wash') {
@@ -159,7 +154,7 @@ export function composeMelodyPattern(ctx: HarmonyCtx, flavorIds: string[] | unde
     return `note("<${stacks}>").struct("${rhythm === 'mel:rhythm:busy' ? 'x ~ x ~' : 'x'}")`
   }
 
-  if (riff === 'mel:riff:strum' || !riff) {
+  if (riff === 'mel:riff:strum') {
     const stacks = ctx.triads
       .map((t) => {
         const notes = t.map((n) => withOct(n, oct))
@@ -218,7 +213,6 @@ export function composeMelodyPattern(ctx: HarmonyCtx, flavorIds: string[] | unde
     return notePerBar(hits)
   }
 
-  // tasty lick
   const lick = ctx.triads.map((t, i) => {
     const a = withOct(t[0], oct)
     const b = withOct(t[1], oct)
@@ -242,10 +236,40 @@ export function composeMelodyPattern(ctx: HarmonyCtx, flavorIds: string[] | unde
   return notePerBar(lick)
 }
 
+function stackParts(parts: string[]): string {
+  if (!parts.length) return 'silence'
+  if (parts.length === 1) return parts[0]!
+  return `stack(${parts.join(', ')})`
+}
+
+export function composeMelodyPattern(ctx: HarmonyCtx, flavorIds: string[] | undefined): string {
+  const ids = migrateMelodyFlavorIds(flavorIds)
+  if (!ids.length) return 'silence'
+
+  const riffs = ids.filter((id) => flavorById.get(id)?.section === 'riff')
+  const rhythms = ids.filter((id) => flavorById.get(id)?.section === 'rhythm')
+  const heights = ids.filter((id) => flavorById.get(id)?.section === 'height')
+
+  const riffList = riffs.length ? riffs : ['mel:riff:strum']
+  const rhythmList = rhythms.length ? rhythms : ['mel:rhythm:medium']
+  const octs = heights.length ? heights.map(octOf) : [4]
+
+  const parts: string[] = []
+  for (const riff of riffList) {
+    for (const rhythm of rhythmList) {
+      for (const oct of octs) {
+        parts.push(renderMelodyVoice(ctx, riff, rhythm, oct))
+        if (parts.length >= 8) return stackParts(parts)
+      }
+    }
+  }
+  return stackParts(parts)
+}
+
 export function melodyFlavorSummary(flavorIds: string[] | undefined): string {
   const ids = migrateMelodyFlavorIds(flavorIds)
   if (!ids.length) return 'Silent'
   const labels = ids.map((id) => flavorById.get(id)?.label).filter(Boolean)
-  if (labels.length <= 3) return labels.join(' · ')
-  return `${labels.slice(0, 2).join(' · ')} +${labels.length - 2}`
+  if (labels.length <= 3) return labels.join(' + ')
+  return `${labels.slice(0, 2).join(' + ')} +${labels.length - 2}`
 }

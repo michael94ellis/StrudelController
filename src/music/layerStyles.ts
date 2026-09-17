@@ -64,8 +64,7 @@ const DRUM_STYLE_GROUPS: PatternStyleGroup[] = DRUM_FLAVOR_SECTIONS.map((section
 const BASS_STYLE_GROUPS: PatternStyleGroup[] = BASS_FLAVOR_SECTIONS.map((section) => ({
   id: `bass:${section.id}`,
   label: section.label,
-  exclusive: true,
-  allowOff: true,
+  exclusive: false,
   options: bassFlavorsInSection(section.id).map((f) => ({
     id: f.id,
     label: f.label,
@@ -76,8 +75,7 @@ const BASS_STYLE_GROUPS: PatternStyleGroup[] = BASS_FLAVOR_SECTIONS.map((section
 const MELODY_STYLE_GROUPS: PatternStyleGroup[] = MELODY_FLAVOR_SECTIONS.map((section) => ({
   id: `mel:${section.id}`,
   label: section.label,
-  exclusive: true,
-  allowOff: true,
+  exclusive: false,
   options: melodyFlavorsInSection(section.id).map((f) => ({
     id: f.id,
     label: f.label,
