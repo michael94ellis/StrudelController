@@ -12,12 +12,12 @@ export function GenrePicker() {
       <div>
         <h2 className="font-display text-lg text-ink">Genre</h2>
         <p className="text-sm text-muted">
-          Loads a starter layer stack, tempo, and harmony — replaces the current layers.
+          Loads a starter layer stack, tempo, and harmony. Replaces the current layers.
         </p>
         {active ? (
           <p className="mt-2 text-sm text-ink-soft">
             <span className="font-medium text-ink">{active.label}</span>
-            {' — '}
+            {'. '}
             {active.blurb}
           </p>
         ) : null}

@@ -14,7 +14,7 @@ declare module '../types' {
 export const videogame: GenreModule = {
   id: 'videogame',
   label: 'Video game',
-  blurb: 'Bright chimes, plucked chords, soft kit — cozy adventure energy.',
+  blurb: 'Bright chimes, plucked chords, soft kit. Cozy adventure energy.',
   bpm: 96,
   key: 'F',
   scale: 'major',

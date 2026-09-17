@@ -6,6 +6,7 @@ import { LoopSettings } from './ui/LoopSettings'
 import { LayerRack } from './ui/LayerRack'
 import { useBeatStore } from './store/beatStore'
 import { compileBeat } from './music/compile'
+import { BeatStudioLogo } from './ui/BeatStudioLogo'
 
 export default function App() {
   const beat = useBeatStore((s) => s.beat)
@@ -13,12 +14,15 @@ export default function App() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-wood">Strudel</p>
-        <h1 className="font-display text-4xl sm:text-5xl text-ink mt-1">Beat Studio</h1>
-        <p className="mt-2 max-w-xl text-base text-ink-soft">
-          Build looping beats — set the loop, then stack sample rows per voice.
-        </p>
+      <header className="mb-8 flex gap-4 sm:gap-5">
+        <BeatStudioLogo className="h-14 w-14 sm:h-16 sm:w-16" />
+        <div className="min-w-0">
+          <h1 className="font-display text-4xl sm:text-5xl text-ink leading-tight">Beat Studio</h1>
+          <p className="mt-2 max-w-xl text-base text-ink-soft">
+            Build looping beats: set the loop, then stack sample rows per voice.
+          </p>
+          <p className="mt-1 text-xs text-muted">Powered by Strudel</p>
+        </div>
       </header>
 
       <div className="sticky top-0 z-10 -mx-4 mb-8 border-b border-wood/10 bg-[#f3ebe0]/90 px-4 py-4 backdrop-blur-md sm:-mx-6 sm:px-6">

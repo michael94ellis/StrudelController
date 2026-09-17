@@ -15,7 +15,7 @@ declare module '../types' {
 export const trap: GenreModule = {
   id: 'trap',
   label: 'Trap',
-  blurb: 'Rolling hats, sparse kick, heavy sub — modern 808 pocket.',
+  blurb: 'Rolling hats, sparse kick, heavy sub. Modern 808 pocket.',
   bpm: 140,
   key: 'C',
   scale: 'minor',

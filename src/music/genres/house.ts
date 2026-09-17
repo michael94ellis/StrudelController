@@ -20,7 +20,7 @@ declare module '../types' {
 export const house: GenreModule = {
   id: 'house',
   label: 'House',
-  blurb: 'Four-on-floor, pump bass, gated stabs — club EDM energy.',
+  blurb: 'Four-on-floor, pump bass, gated stabs. Club EDM energy.',
   bpm: 128,
   key: 'A',
   scale: 'minor',

@@ -4,7 +4,7 @@ Layered beat / music maker powered by [Strudel](https://strudel.cc) (`@strudel/w
 
 ## License
 
-**AGPL-3.0-or-later** — required when integrating Strudel.
+**AGPL-3.0-or-later** (required when integrating Strudel).
 
 ## Develop
 

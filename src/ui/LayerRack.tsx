@@ -12,7 +12,7 @@ export function LayerRack() {
       <div>
         <h2 className="font-display text-lg text-ink">Tracks</h2>
         <p className="text-sm text-muted">
-          One row per voice — pick a sample, then expand for pattern and timbre.
+          One row per voice. Pick a sample, then expand for pattern and timbre.
         </p>
       </div>
 

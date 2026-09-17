@@ -13,7 +13,7 @@ declare module '../types' {
 export const lofi: GenreModule = {
   id: 'lofi',
   label: 'Lo-fi',
-  blurb: 'Dusty drums, warm keys, vinyl air — study-beat calm.',
+  blurb: 'Dusty drums, warm keys, vinyl air. Study-beat calm.',
   bpm: 84,
   key: 'Bb',
   scale: 'major',

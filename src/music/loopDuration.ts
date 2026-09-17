@@ -34,65 +34,57 @@ export function beatCycleSeconds(beat: Beat): number {
   return beatCycleBars(beat) * barSeconds(beat.bpm)
 }
 
-export type ExportSnap = {
-  /** Wall-clock length to record (exact multiple of the musical cycle). */
-  seconds: number
-  /** How many full cycles fit in the file. */
-  loops: number
-  /** One cycle length in seconds. */
+/** Fixed loop-count chips (always distinct). */
+export const EXPORT_LOOP_COUNTS = [1, 2, 4, 8] as const
+export type ExportLoopCount = (typeof EXPORT_LOOP_COUNTS)[number]
+
+/** Length selection: N musical cycles, or record until stop. */
+export type ExportLength = ExportLoopCount | 'indefinite'
+
+export type ExportPlan = {
+  length: ExportLength
+  /** null when indefinite — user stops recording manually. */
+  seconds: number | null
+  loops: number | null
   cycleSeconds: number
-  /** Bars per cycle. */
   cycleBars: number
-  /** User's target chip (5 / 10 / 15 / 30). */
-  targetSeconds: number
 }
 
-/**
- * Pick a duration near `targetSeconds` that is an integer number of musical
- * cycles so the downloaded file loops without a seam.
- */
-export function snapExportDuration(beat: Beat, targetSeconds: number): ExportSnap {
+export function planExport(beat: Beat, length: ExportLength): ExportPlan {
   const cycleBars = beatCycleBars(beat)
   const cycleSeconds = cycleBars * barSeconds(beat.bpm)
-  const target = Math.max(1, targetSeconds)
 
-  if (cycleSeconds <= 0) {
+  if (length === 'indefinite') {
     return {
-      seconds: target,
-      loops: 1,
-      cycleSeconds: target,
+      length,
+      seconds: null,
+      loops: null,
+      cycleSeconds,
       cycleBars,
-      targetSeconds: target,
-    }
-  }
-
-  const rounded = Math.max(1, Math.round(target / cycleSeconds))
-  const floored = Math.max(1, Math.floor(target / cycleSeconds))
-  const ceiled = Math.max(1, Math.ceil(target / cycleSeconds))
-
-  const candidates = [...new Set([rounded, floored, ceiled])]
-  let best = candidates[0]!
-  let bestDist = Math.abs(best * cycleSeconds - target)
-  for (const n of candidates) {
-    const dist = Math.abs(n * cycleSeconds - target)
-    if (dist < bestDist || (dist === bestDist && n < best)) {
-      best = n
-      bestDist = dist
     }
   }
 
   return {
-    seconds: best * cycleSeconds,
-    loops: best,
+    length,
+    seconds: length * cycleSeconds,
+    loops: length,
     cycleSeconds,
     cycleBars,
-    targetSeconds: target,
   }
 }
 
-export function formatExportLabel(snap: ExportSnap): string {
-  const sec = snap.seconds
+export function formatExportPlan(plan: ExportPlan): string {
+  if (plan.length === 'indefinite') {
+    return `∞ until you stop (~${plan.cycleSeconds.toFixed(1)}s / loop)`
+  }
+  const sec = plan.seconds ?? 0
   const nice = Number.isInteger(sec) ? String(sec) : sec.toFixed(1)
-  if (Math.abs(sec - snap.targetSeconds) < 0.05) return `${snap.targetSeconds}s`
-  return `~${snap.targetSeconds}s → ${nice}s`
+  return `${plan.loops}× → ${nice}s`
+}
+
+/** Trim wall-clock elapsed down to the last full musical cycle (seamless ∞ takes). */
+export function trimToFullCycles(elapsedSeconds: number, cycleSeconds: number): number {
+  if (cycleSeconds <= 0) return Math.max(0, elapsedSeconds)
+  const loops = Math.floor(elapsedSeconds / cycleSeconds + 1e-6)
+  return Math.max(cycleSeconds, loops * cycleSeconds)
 }

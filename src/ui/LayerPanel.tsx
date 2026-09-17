@@ -14,7 +14,7 @@ function vibeTitle(layer: BeatLayer): string {
 }
 
 function vibeHint(_layer: BeatLayer): string {
-  return 'Stack any mix — multiple per section is fine.'
+  return 'Stack any mix; multiple per section is fine.'
 }
 
 export function LayerPanel({ layer }: Props) {

@@ -29,8 +29,8 @@ import {
   stopCode,
   updateCode,
 } from '../audio/strudelEngine'
-import { downloadBlob, recordLoopAudio, sanitizeFilename } from '../audio/exportLoop'
-import { snapExportDuration } from '../music/loopDuration'
+import { downloadBlob, recordLoopAudio, sanitizeFilename, startLiveRecording, stopLiveRecordingAligned, cancelLiveRecording, isLiveRecording } from '../audio/exportLoop'
+import { planExport, type ExportLength, trimToFullCycles } from '../music/loopDuration'
 
 type BeatState = {
   beats: Beat[]
@@ -72,10 +72,11 @@ type BeatState = {
   audition: () => Promise<void>
   refreshIfPlaying: () => Promise<void>
   /**
-   * Download a seamless loop near targetSeconds (5/10/15/30).
-   * Duration snaps to whole musical cycles so the file loops cleanly.
+   * Download a seamless loop: fixed cycle counts (1/2/4/8) or indefinite
+   * (record until stopExport).
    */
-  exportLoop: (targetSeconds: 5 | 10 | 15 | 30) => Promise<void>
+  exportLoop: (length: ExportLength) => Promise<void>
+  stopExport: () => Promise<void>
   exporting: boolean
   exportLabel: string | null
 }
@@ -344,17 +345,13 @@ export const useBeatStore = create<BeatState>((set, get) => {
       }, 280)
     },
 
-    exportLoop: async (targetSeconds) => {
+    exportLoop: async (length) => {
       if (get().exporting) return
       clearRefreshTimer()
       const beat = get().beat
-      const snap = snapExportDuration(beat, targetSeconds)
-      const label =
-        Math.abs(snap.seconds - snap.targetSeconds) < 0.05
-          ? `Recording ${snap.targetSeconds}s…`
-          : `Recording ${snap.seconds.toFixed(1)}s (${snap.loops}× loop)…`
-      set({ exporting: true, exportLabel: label, error: null })
-      try {
+      const plan = planExport(beat, length)
+
+      const prepare = async () => {
         await ensureStrudel()
         const drums = preferredDrumBank(beat)
         const loaded = await ensureDrumBank(drums)
@@ -362,14 +359,39 @@ export const useBeatStore = create<BeatState>((set, get) => {
         if (!getDrumPlayback()) {
           throw new Error('Drum samples did not load. Check your network, then try again.')
         }
-        // Restart from cycle 0 so the take lines up with the loop
         await playCode(compileBeat(beat), drums)
         set({ playing: isPlaying() })
+      }
 
-        const { blob, extension, seconds } = await recordLoopAudio(snap.seconds)
+      if (length === 'indefinite') {
+        set({
+          exporting: true,
+          exportLabel: 'Recording… tap Stop & save when done',
+          error: null,
+        })
+        try {
+          await prepare()
+          await startLiveRecording()
+        } catch (err) {
+          cancelLiveRecording()
+          set({
+            exporting: false,
+            exportLabel: null,
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+        return
+      }
+
+      const sec = plan.seconds!
+      const label = `Recording ${plan.loops}× (~${sec.toFixed(1)}s)…`
+      set({ exporting: true, exportLabel: label, error: null })
+      try {
+        await prepare()
+        const { blob, extension, seconds } = await recordLoopAudio(sec)
         const base = sanitizeFilename(beat.name)
         const secTag = Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(1)
-        downloadBlob(blob, `${base}-${secTag}s.${extension}`)
+        downloadBlob(blob, `${base}-${plan.loops}x-${secTag}s.${extension}`)
         set({ exportLabel: null })
       } catch (err) {
         set({
@@ -378,6 +400,29 @@ export const useBeatStore = create<BeatState>((set, get) => {
         })
       } finally {
         set({ exporting: false })
+      }
+    },
+
+    stopExport: async () => {
+      if (!get().exporting || !isLiveRecording()) return
+      const beat = get().beat
+      const plan = planExport(beat, 'indefinite')
+      set({ exportLabel: 'Finishing loop…' })
+      try {
+        const { blob, extension, seconds } = await stopLiveRecordingAligned(plan.cycleSeconds)
+        const seamless = trimToFullCycles(seconds, plan.cycleSeconds)
+        const base = sanitizeFilename(beat.name)
+        const secTag = Number.isInteger(seamless) ? String(seamless) : seamless.toFixed(1)
+        const loops = Math.max(1, Math.round(seamless / plan.cycleSeconds))
+        downloadBlob(blob, `${base}-${loops}x-${secTag}s.${extension}`)
+        set({ exportLabel: null, exporting: false })
+      } catch (err) {
+        cancelLiveRecording()
+        set({
+          exporting: false,
+          exportLabel: null,
+          error: err instanceof Error ? err.message : String(err),
+        })
       }
     },
   }
