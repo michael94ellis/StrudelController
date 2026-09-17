@@ -1,7 +1,7 @@
 {
-  "name": "Beat Studio",
-  "short_name": "Beat Studio",
-  "description": "Beat Studio: layered beat maker powered by Strudel.",
+  "name": "Beat Strudelio",
+  "short_name": "Strudelio",
+  "description": "Beat Strudelio: layered beat maker powered by Strudel.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

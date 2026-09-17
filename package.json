@@ -1,5 +1,5 @@
 {
-  "name": "beat-studio",
+  "name": "beat-strudelio",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -31,5 +31,5 @@
     "vite": "^8.3.0"
   },
   "license": "AGPL-3.0-or-later",
-  "description": "Beat Studio: layered beat maker powered by Strudel"
+  "description": "Beat Strudelio: layered beat maker powered by Strudel"
 }

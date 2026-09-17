@@ -1,4 +1,4 @@
-# Beat Studio
+# Beat Strudelio
 
 Layered beat / music maker powered by [Strudel](https://strudel.cc) (`@strudel/web`).
 
