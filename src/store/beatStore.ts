@@ -10,6 +10,12 @@ import {
   withGenerator,
   withKind,
 } from '../music/beats/build'
+import {
+  CHORD_PRESETS,
+  patternGroupsForKind,
+  progressionToChordStyles,
+  resolvePattern,
+} from '../music/layerStyles'
 import { applySampleToLayer, createLayerFromSample } from '../music/sampleLayers'
 import { preferredDrumBank } from '../music/drums'
 import {
@@ -40,7 +46,10 @@ type BeatState = {
   setBpm: (bpm: number) => void
   setKey: (key: string) => void
   setScale: (scale: string) => void
-  setLayerProgression: (layerId: string, progressionId: string) => void
+  toggleLayerPatternStyle: (layerId: string, groupId: string, styleId: string) => void
+  toggleLayerChordDegree: (layerId: string, degreeId: string) => void
+  setLayerChordLength: (layerId: string, length: 4 | 8 | 16) => void
+  applyLayerChordPreset: (layerId: string, presetId: string) => void
   /** New bar fills / phrase shapes without changing genre or harmony. */
   shuffleVariation: () => void
 
@@ -177,8 +186,56 @@ export const useBeatStore = create<BeatState>((set, get) => {
     setBpm: (bpm) => patch((beat) => ({ ...beat, bpm })),
     setKey: (key) => patch((beat) => ({ ...beat, key })),
     setScale: (scale) => patch((beat) => ({ ...beat, scale })),
-    setLayerProgression: (layerId, progressionId) =>
-      patchLayer(layerId, (l) => ({ ...l, progressionId })),
+    toggleLayerPatternStyle: (layerId, groupId, styleId) =>
+      patchLayer(layerId, (l) => {
+        const groups = patternGroupsForKind(l.kind)
+        const group = groups.find((g) => g.id === groupId)
+        if (!group) return l
+        const inGroup = new Set(group.options.map((o) => o.id))
+        const current = l.patternStyleIds ?? []
+        const rest = current.filter((id) => !inGroup.has(id))
+        const exclusive = group.exclusive !== false
+        const alreadyOn = current.includes(styleId)
+
+        let patternStyleIds: string[]
+        if (exclusive) {
+          if (alreadyOn) {
+            if (!group.allowOff) return l
+            patternStyleIds = rest
+          } else {
+            patternStyleIds = [...rest, styleId]
+          }
+        } else {
+          patternStyleIds = alreadyOn
+            ? current.filter((id) => id !== styleId)
+            : [...current, styleId]
+        }
+
+        const draft = { ...l, patternStyleIds }
+        const { generator, params } = resolvePattern(draft)
+        return { ...draft, generator, params }
+      }),
+    toggleLayerChordDegree: (layerId, degreeId) =>
+      patchLayer(layerId, (l) => {
+        const ids = l.chordStyleIds ?? progressionToChordStyles(l.progressionId).chordStyleIds
+        const next = ids.includes(degreeId)
+          ? ids.filter((id) => id !== degreeId)
+          : [...ids, degreeId]
+        const chordStyleIds = next.length ? next : ['deg:I']
+        return { ...l, chordStyleIds }
+      }),
+    setLayerChordLength: (layerId, length) =>
+      patchLayer(layerId, (l) => ({ ...l, chordLength: length })),
+    applyLayerChordPreset: (layerId, presetId) =>
+      patchLayer(layerId, (l) => {
+        const preset = CHORD_PRESETS.find((p) => p.id === presetId)
+        if (!preset) return l
+        return {
+          ...l,
+          chordStyleIds: [...preset.degrees],
+          chordLength: preset.length,
+        }
+      }),
     shuffleVariation: () => patch((beat) => ({ ...beat, variation: beat.variation + 1 })),
 
     addLayerFromSample: (sampleId) => {

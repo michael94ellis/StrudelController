@@ -5,18 +5,12 @@ function curatedDrumSampleId(bank: DrumBankId): string {
   return `${DRUM_SAMPLE_PREFIX}${bank}`
 }
 
-/** Drum machines shown in the sample picker (subset of full bank list). */
-export const CURATED_DRUM_BANKS: Array<{ bank: DrumBankId; label: string }> = [
-  { bank: 'RolandTR909', label: 'TR-909' },
-  { bank: 'RolandTR808', label: 'TR-808' },
-  { bank: 'AkaiLinn', label: 'Linn' },
-  { bank: 'AkaiMPC60', label: 'MPC60' },
-  { bank: 'EmuSP12', label: 'SP-12' },
-]
-
 export type CuratedMelodicSample = { value: string; label: string; group: string }
 
-/** ~25 melodic / noise picks — variety plus paired options (two synth basses, two leads, etc.). */
+/**
+ * Melodic / noise picks, grouped for the sample browser.
+ * Group labels are the top-level “list of lists” categories.
+ */
 export const CURATED_MELODIC_SAMPLES: CuratedMelodicSample[] = [
   // Bass
   { value: 'sine', label: 'Sine', group: 'Bass' },
@@ -24,44 +18,53 @@ export const CURATED_MELODIC_SAMPLES: CuratedMelodicSample[] = [
   { value: 'gm_synth_bass_1', label: 'Synth bass 1', group: 'Bass' },
   { value: 'gm_synth_bass_2', label: 'Synth bass 2', group: 'Bass' },
   { value: 'gm_electric_bass_finger', label: 'Electric bass', group: 'Bass' },
+  { value: 'gm_acoustic_bass', label: 'Acoustic bass', group: 'Bass' },
   // Keys
   { value: 'piano', label: 'Piano (samples)', group: 'Keys' },
   { value: 'gm_piano', label: 'Grand piano', group: 'Keys' },
   { value: 'gm_epiano1', label: 'Rhodes / EP', group: 'Keys' },
   { value: 'gm_clavinet', label: 'Clavinet', group: 'Keys' },
-  // Synth
-  { value: 'sawtooth', label: 'Saw', group: 'Synth' },
-  { value: 'square', label: 'Square', group: 'Synth' },
-  { value: 'supersaw', label: 'Supersaw', group: 'Synth' },
-  { value: 'gm_lead_1_square', label: 'Lead square', group: 'Synth' },
-  { value: 'gm_lead_2_sawtooth', label: 'Lead saw', group: 'Synth' },
-  // Pads & strings
+  { value: 'gm_rock_organ', label: 'Rock organ', group: 'Keys' },
+  // Synths
+  { value: 'sawtooth', label: 'Saw', group: 'Synths' },
+  { value: 'square', label: 'Square', group: 'Synths' },
+  { value: 'supersaw', label: 'Supersaw', group: 'Synths' },
+  { value: 'gm_lead_1_square', label: 'Lead square', group: 'Synths' },
+  { value: 'gm_lead_2_sawtooth', label: 'Lead saw', group: 'Synths' },
+  { value: 'gm_synth_brass_1', label: 'Synth brass', group: 'Synths' },
+  // Pads
   { value: 'gm_pad_warm', label: 'Warm pad', group: 'Pads' },
   { value: 'gm_pad_halo', label: 'Halo pad', group: 'Pads' },
-  { value: 'gm_string_ensemble_1', label: 'Strings', group: 'Pads' },
-  // Plucks & bells
-  { value: 'gm_marimba', label: 'Marimba', group: 'Pluck & bell' },
-  { value: 'gm_glockenspiel', label: 'Glockenspiel', group: 'Pluck & bell' },
-  { value: 'gm_music_box', label: 'Music box', group: 'Pluck & bell' },
-  { value: 'gm_vibraphone', label: 'Vibraphone', group: 'Pluck & bell' },
-  // Horns & reeds
-  { value: 'gm_alto_sax', label: 'Alto sax', group: 'Horns & reeds' },
-  { value: 'gm_tenor_sax', label: 'Tenor sax', group: 'Horns & reeds' },
-  { value: 'gm_trumpet', label: 'Trumpet', group: 'Horns & reeds' },
-  { value: 'gm_muted_trumpet', label: 'Muted trumpet', group: 'Horns & reeds' },
-  { value: 'gm_flute', label: 'Flute', group: 'Horns & reeds' },
-  { value: 'gm_clarinet', label: 'Clarinet', group: 'Horns & reeds' },
-  { value: 'gm_harmonica', label: 'Harmonica', group: 'Horns & reeds' },
-  { value: 'gm_brass_section', label: 'Brass section', group: 'Horns & reeds' },
-  // Color
-  { value: 'gm_synth_brass_1', label: 'Synth brass', group: 'Stabs & guitar' },
-  { value: 'gm_electric_guitar_clean', label: 'Clean guitar', group: 'Stabs & guitar' },
-  { value: 'gm_overdriven_guitar', label: 'Distorted guitar', group: 'Stabs & guitar' },
-  { value: 'gm_rock_organ', label: 'Rock organ', group: 'Stabs & guitar' },
-  { value: 'gm_orchestra_hit', label: 'Orchestra hit', group: 'Stabs & guitar' },
-  { value: 'gm_kalimba', label: 'Kalimba', group: 'World & percussion' },
-  { value: 'gm_steel_drums', label: 'Steel drums', group: 'World & percussion' },
-  { value: 'gm_taiko_drum', label: 'Taiko', group: 'World & percussion' },
+  { value: 'gm_choir_aahs', label: 'Choir', group: 'Pads' },
+  // Strings
+  { value: 'gm_string_ensemble_1', label: 'String ensemble', group: 'Strings' },
+  { value: 'gm_cello', label: 'Cello', group: 'Strings' },
+  { value: 'gm_violin', label: 'Violin', group: 'Strings' },
+  { value: 'gm_pizzicato_strings', label: 'Pizzicato', group: 'Strings' },
+  // Horns
+  { value: 'gm_alto_sax', label: 'Alto sax', group: 'Horns' },
+  { value: 'gm_tenor_sax', label: 'Tenor sax', group: 'Horns' },
+  { value: 'gm_trumpet', label: 'Trumpet', group: 'Horns' },
+  { value: 'gm_muted_trumpet', label: 'Muted trumpet', group: 'Horns' },
+  { value: 'gm_french_horn', label: 'French horn', group: 'Horns' },
+  { value: 'gm_brass_section', label: 'Brass section', group: 'Horns' },
+  { value: 'gm_flute', label: 'Flute', group: 'Horns' },
+  { value: 'gm_clarinet', label: 'Clarinet', group: 'Horns' },
+  { value: 'gm_harmonica', label: 'Harmonica', group: 'Horns' },
+  // Pluck & bells
+  { value: 'gm_marimba', label: 'Marimba', group: 'Pluck & bells' },
+  { value: 'gm_glockenspiel', label: 'Glockenspiel', group: 'Pluck & bells' },
+  { value: 'gm_music_box', label: 'Music box', group: 'Pluck & bells' },
+  { value: 'gm_vibraphone', label: 'Vibraphone', group: 'Pluck & bells' },
+  { value: 'gm_kalimba', label: 'Kalimba', group: 'Pluck & bells' },
+  // Guitar
+  { value: 'gm_electric_guitar_clean', label: 'Clean guitar', group: 'Guitar' },
+  { value: 'gm_overdriven_guitar', label: 'Distorted guitar', group: 'Guitar' },
+  { value: 'gm_acoustic_guitar_nylon', label: 'Nylon guitar', group: 'Guitar' },
+  { value: 'gm_orchestra_hit', label: 'Orchestra hit', group: 'Guitar' },
+  // World
+  { value: 'gm_steel_drums', label: 'Steel drums', group: 'World' },
+  { value: 'gm_taiko_drum', label: 'Taiko', group: 'World' },
   // Texture
   { value: 'pink', label: 'Pink noise', group: 'Texture' },
   { value: 'white', label: 'White noise', group: 'Texture' },
@@ -77,35 +80,37 @@ export function curatedMelodicLabel(value: string): string | undefined {
 }
 
 export function curatedDrumLabel(bank: DrumBankId): string {
-  const row = CURATED_DRUM_BANKS.find((d) => d.bank === bank)
-  if (row) return `Drums · ${row.label}`
-  const fallback = DRUM_BANK_OPTIONS.find((o) => o.value === bank)
-  return fallback ? `Drums · ${fallback.label}` : 'Drums'
+  const row = DRUM_BANK_OPTIONS.find((d) => d.value === bank)
+  return row ? row.label : 'Drums'
 }
+
+/** Top-level order for the sample browser (list of lists). */
+export const SAMPLE_CATEGORY_ORDER = [
+  'Drums',
+  'Bass',
+  'Keys',
+  'Synths',
+  'Pads',
+  'Strings',
+  'Horns',
+  'Pluck & bells',
+  'Guitar',
+  'World',
+  'Texture',
+] as const
 
 export function buildCuratedSampleOptionGroups(): Array<{
   label: string
   options: Array<{ value: string; label: string }>
 }> {
   const drumGroup = {
-    label: 'Drum machines',
-    options: CURATED_DRUM_BANKS.map((d) => ({
-      value: curatedDrumSampleId(d.bank),
-      label: curatedDrumLabel(d.bank),
+    label: 'Drums',
+    options: DRUM_BANK_OPTIONS.map((d) => ({
+      value: curatedDrumSampleId(d.value),
+      label: curatedDrumLabel(d.value),
     })),
   }
 
-  const groupOrder = [
-    'Bass',
-    'Keys',
-    'Synth',
-    'Pads',
-    'Pluck & bell',
-    'Horns & reeds',
-    'Stabs & guitar',
-    'World & percussion',
-    'Texture',
-  ]
   const byGroup = new Map<string, Array<{ value: string; label: string }>>()
   for (const s of CURATED_MELODIC_SAMPLES) {
     const list = byGroup.get(s.group) ?? []
@@ -113,9 +118,9 @@ export function buildCuratedSampleOptionGroups(): Array<{
     byGroup.set(s.group, list)
   }
 
-  const melodicGroups = groupOrder
-    .filter((name) => byGroup.has(name))
-    .map((name) => ({ label: name, options: byGroup.get(name)! }))
+  const melodicGroups = SAMPLE_CATEGORY_ORDER.filter(
+    (name) => name !== 'Drums' && byGroup.has(name),
+  ).map((name) => ({ label: name, options: byGroup.get(name)! }))
 
   return [drumGroup, ...melodicGroups]
 }

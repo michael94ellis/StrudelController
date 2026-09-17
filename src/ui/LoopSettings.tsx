@@ -25,7 +25,7 @@ export function LoopSettings() {
       <div>
         <h2 className="font-display text-lg text-ink">Loop</h2>
         <p className="text-sm text-muted">
-          Tempo and key for the whole beat. Pattern and chord pattern are per track.
+          Tempo and key for the whole beat. Groove and chord degrees are per track (expand a row).
         </p>
       </div>
 

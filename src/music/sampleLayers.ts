@@ -1,6 +1,7 @@
 import type { BeatLayer, InstrumentKind } from './types'
 import { DRUM_BANK_OPTIONS, type DrumBankId } from './drums'
 import { defaultLayer, generatorsFor, withKind } from './beats/build'
+import { patternStyleIdsForLayer } from './layerStyles'
 import { instrumentDefs } from './instruments/registry'
 import {
   buildCuratedSampleOptionGroups,
@@ -141,9 +142,15 @@ export function applySampleToLayer(layer: BeatLayer, sampleId: string): BeatLaye
     const base = withKind(layer, 'drumkit')
     const generators = generatorsFor('drumkit')
     const generator = generators.includes(base.generator) ? base.generator : generators[0]
+    const patternStyleIds =
+      layer.kind === 'drumkit' && layer.patternStyleIds?.length
+        ? layer.patternStyleIds
+        : patternStyleIdsForLayer(generator, 'drumkit')
     return {
       ...base,
-      generator,
+      generator: 'drumCompose',
+      params: { flavorIds: patternStyleIds.join(',') },
+      patternStyleIds,
       instrumentParams: {
         ...instrumentDefs.drumkit.defaultParams,
         ...base.instrumentParams,

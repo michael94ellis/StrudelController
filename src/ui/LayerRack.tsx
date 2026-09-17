@@ -1,8 +1,7 @@
-import { Plus } from 'lucide-react'
 import { SAMPLE_OPTION_GROUPS } from '../music/sampleLayers'
 import { useBeatStore } from '../store/beatStore'
 import { LayerRow } from './LayerRow'
-import { SampleSelect } from './controls/SampleSelect'
+import { SampleCatalog } from './controls/SampleCatalog'
 
 export function LayerRack() {
   const layers = useBeatStore((s) => s.beat.layers)
@@ -30,18 +29,11 @@ export function LayerRack() {
       </div>
 
       <div className="rounded-2xl border border-wood/15 bg-cream/50 p-4">
-        <SampleSelect
+        <SampleCatalog
           label="Add track from sample"
-          value=""
-          placeholder="Pick a sample…"
           groups={SAMPLE_OPTION_GROUPS}
-          onChange={(sampleId) => addLayerFromSample(sampleId)}
-          filterable
+          onPick={addLayerFromSample}
         />
-        <p className="mt-2 flex items-center gap-1 text-xs text-muted">
-          <Plus className="h-3.5 w-3.5" />
-          Drums, bass, keys, synths, sax & horns, pads, and more.
-        </p>
       </div>
     </section>
   )

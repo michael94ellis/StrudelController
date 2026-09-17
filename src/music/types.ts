@@ -64,6 +64,7 @@ export type InstrumentKind = keyof InstrumentKinds
  *   declare module '../types' { interface GeneratorNames { houseKit: true } }
  */
 export interface GeneratorNames {
+  drumCompose: true
   fourOnFloor: true
   breakbeat: true
   sparsePulse: true
@@ -100,8 +101,13 @@ export type BeatLayer = {
   /** Rhythm / voicing algorithm for this voice. */
   generator: GeneratorName
   params: ParamMap
-  /** Chord sequence for this voice — one chord per bar (`PROGRESSIONS` in theory). */
+  /** Legacy preset id; used when `chordStyleIds` is empty. */
   progressionId: string
+  /** Active groove / pattern style pill ids (per-group radio). */
+  patternStyleIds?: string[]
+  /** Roman-degree pills enabled for this layer’s chord loop. */
+  chordStyleIds?: string[]
+  chordLength?: 4 | 8 | 16
 }
 
 /**

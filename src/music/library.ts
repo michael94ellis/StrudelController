@@ -1,10 +1,12 @@
 import type { Beat, BeatLayer } from './types'
 import { applyGenre, createBeat } from './beats/build'
 import { DEFAULT_PROGRESSION_ID, getProgression } from './theory'
+import { patternStyleIdsForLayer, progressionToChordStyles } from './layerStyles'
+import { migrateDrumFlavorIds } from './drumFlavors'
 import { withStrudelDefaults } from './strudelSounds'
 
 const STORAGE_KEY = 'beat-studio:beats'
-const STORAGE_VERSION = 11
+const STORAGE_VERSION = 13
 
 export type BeatLibrary = {
   version: number
@@ -32,9 +34,27 @@ type LegacyBeat = Beat & {
 
 function normalizeLayer(layer: LegacyLayer, beatProgressionId: string): BeatLayer {
   const { energy: _e, density: _d, ...rest } = layer
+  const progressionId = layer.progressionId ?? beatProgressionId
+  const chord =
+    layer.chordStyleIds?.length
+      ? { chordStyleIds: layer.chordStyleIds, chordLength: layer.chordLength ?? 4 }
+      : progressionToChordStyles(progressionId)
+  let patternStyleIds =
+    layer.patternStyleIds?.length
+      ? layer.patternStyleIds
+      : patternStyleIdsForLayer(layer.generator, layer.kind)
+  if (layer.kind === 'drumkit') {
+    patternStyleIds = migrateDrumFlavorIds(patternStyleIds)
+  }
   return {
     ...rest,
-    progressionId: layer.progressionId ?? beatProgressionId,
+    progressionId,
+    patternStyleIds,
+    chordStyleIds: chord.chordStyleIds,
+    chordLength: chord.chordLength,
+    ...(layer.kind === 'drumkit'
+      ? { generator: 'drumCompose' as const, params: { flavorIds: patternStyleIds.join(',') } }
+      : {}),
   }
 }
 

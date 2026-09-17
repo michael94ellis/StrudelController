@@ -1,5 +1,6 @@
 import type { Beat, BeatLayer } from './types'
-import { getProgression, resolveHarmony } from './theory'
+import { resolveProgression, resolvePattern } from './layerStyles'
+import { resolveHarmony } from './theory'
 import { renderInstrument } from './instruments/registry'
 import { generatePart } from './generators/registry'
 import { getGenre } from './genres'
@@ -19,8 +20,9 @@ function applySwing(part: string, swing: number): string {
 
 function compileLayer(layer: BeatLayer, beat: Beat, swing: number): string | null {
   if (!layer.enabled) return null
-  const harmony = resolveHarmony(beat, getProgression(layer.progressionId), swing)
-  const pattern = generatePart(layer.generator, harmony, layer.params)
+  const harmony = resolveHarmony(beat, resolveProgression(layer), swing)
+  const { generator, params } = resolvePattern(layer)
+  const pattern = generatePart(generator, harmony, params)
   let compiled = renderInstrument(layer.kind, pattern, layer.instrumentParams, beat.bpm)
   if (layer.kind !== 'drumkit') {
     compiled = applySwing(compiled, swing)

@@ -1,6 +1,7 @@
 import type { GeneratorName, HarmonyCtx, ParamMap, ParamSchema } from '../types'
 import { num, str } from '../types'
-import { drumMini, drumPerBar } from '../drums'
+import { composeDrumPattern, DEFAULT_DRUM_FLAVOR_IDS } from '../drumFlavors'
+import { drumMini } from '../drums'
 import { notePerBar, notePerBarStruct } from '../pattern'
 import { pickBar } from '../variation'
 
@@ -24,85 +25,65 @@ export type GeneratorTable = Partial<Record<GeneratorName, GeneratorDef>>
  * under `src/music/genres/`.
  */
 export const coreGenerators = {
+  /** Stackable kick / snare / hat / spice particles (see `drumFlavors.ts`). */
+  drumCompose: {
+    name: 'drumCompose',
+    label: 'Drum kit',
+    suits: ['drumkit'],
+    defaultParams: { flavorIds: DEFAULT_DRUM_FLAVOR_IDS.join(',') },
+    schema: [],
+    generate: (_ctx, params) => {
+      const raw = str(params, 'flavorIds', '')
+      if (!raw.trim()) return 'silence'
+      const ids = raw.split(',').map((s) => s.trim()).filter(Boolean)
+      return composeDrumPattern(ids)
+    },
+  },
+
   fourOnFloor: {
     name: 'fourOnFloor',
     label: 'Four-on-floor',
     suits: ['drumkit'],
-    defaultParams: { density: 0.85, openHats: false },
-    schema: [
-      { key: 'density', type: 'slider', label: 'Density', min: 0.3, max: 1, step: 0.05 },
-      { key: 'openHats', type: 'toggle', label: 'Open hats' },
-    ],
-    generate: (ctx, params) => {
-      const dens = num(params, 'density', 0.85)
-      const open = params.openHats === true
-      const kick = dens > 0.5 ? 'bd*4' : 'bd ~ bd ~'
-      const snare = dens > 0.7 ? '~ sd ~ sd' : '~ sd ~ ~'
-      const hats = open ? 'hh hh hh*2 hh hh hh*2 hh' : 'hh*8'
-
-      if (ctx.bars <= 1) return drumMini(kick, snare, hats)
-
-      const bars = ctx.roots.map((_, i) => {
-        const k = pickBar(ctx.variation, i, [kick, 'bd ~ bd ~ bd ~ bd', 'bd*4'])
-        const s = pickBar(ctx.variation, i, [snare, '~ ~ sd ~ ~ ~ sd ~', snare])
-        const h = pickBar(ctx.variation, i, [hats, 'hh*16', '~ hh ~ hh ~ hh ~ hh'])
-        return `${k}, ${s}, ${h}`
-      })
-      return drumPerBar(bars)
-    },
+    defaultParams: {},
+    schema: [],
+    generate: () => drumMini('bd*4', '~ sd ~ sd', 'hh ~ hh ~ hh ~ hh ~'),
   },
 
   breakbeat: {
     name: 'breakbeat',
     label: 'Breakbeat',
     suits: ['drumkit'],
-    defaultParams: { density: 0.75 },
-    schema: [{ key: 'density', type: 'slider', label: 'Density', min: 0.4, max: 1, step: 0.05 }],
-    generate: (_ctx, params) => {
-      const dens = num(params, 'density', 0.75)
-      const kick = dens > 0.8 ? 'bd ~ bd bd ~ bd ~ bd' : 'bd ~ ~ bd ~ bd ~ ~'
-      return drumMini(kick, '~ sd ~ [sd ~] ~ sd ~ sd', 'hh*8')
-    },
+    defaultParams: {},
+    schema: [],
+    generate: () =>
+      drumMini('bd ~ ~ bd ~ bd ~ ~', '~ sd ~ [sd ~] ~ sd ~ sd', 'hh*8'),
   },
 
   sparsePulse: {
     name: 'sparsePulse',
     label: 'Sparse pulse',
     suits: ['drumkit'],
-    defaultParams: { density: 0.45 },
-    schema: [{ key: 'density', type: 'slider', label: 'Density', min: 0.2, max: 0.8, step: 0.05 }],
-    generate: (_ctx, params) => {
-      const dens = num(params, 'density', 0.45)
-      const kick = dens > 0.5 ? 'bd ~ ~ ~ bd ~ ~ ~' : 'bd ~ ~ ~ ~ ~ ~ ~'
-      const snare = '~ ~ sd ~ ~ ~ sd ~'
-      const hats = dens > 0.4 ? 'hh ~ hh ~ hh ~ hh ~' : 'hh ~ ~ ~ hh ~ ~ ~'
-      return drumMini(kick, snare, hats)
-    },
+    defaultParams: {},
+    schema: [],
+    generate: () => drumMini('bd ~ ~ ~ bd ~ ~ ~', '~ ~ sd ~ ~ ~ sd ~', '~ hh ~ hh ~ hh ~ hh'),
   },
 
   rimHits: {
     name: 'rimHits',
     label: 'Rim hits',
     suits: ['drumkit'],
-    defaultParams: { density: 0.5 },
-    schema: [{ key: 'density', type: 'slider', label: 'Density', min: 0.2, max: 1, step: 0.05 }],
-    generate: (_ctx, params) => {
-      const dens = num(params, 'density', 0.5)
-      const pat = dens > 0.7 ? 'rim ~ rim rim ~ rim ~ rim' : 'rim ~ ~ rim ~ ~ rim ~'
-      return `s("${pat}")`
-    },
+    defaultParams: {},
+    schema: [],
+    generate: () => `s("rim ~ ~ rim ~ ~ rim ~")`,
   },
 
   shaker: {
     name: 'shaker',
     label: 'Shaker / hush',
     suits: ['drumkit'],
-    defaultParams: { density: 0.7 },
-    schema: [{ key: 'density', type: 'slider', label: 'Density', min: 0.3, max: 1, step: 0.05 }],
-    generate: (_ctx, params) => {
-      const dens = num(params, 'density', 0.7)
-      return dens > 0.6 ? `s("sh*8")` : `s("sh ~ sh ~ sh ~ sh ~")`
-    },
+    defaultParams: {},
+    schema: [],
+    generate: () => `s("sh*8")`,
   },
 
   rootBass: {

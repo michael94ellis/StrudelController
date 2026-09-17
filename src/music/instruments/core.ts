@@ -1,6 +1,5 @@
 import type { InstrumentKind, ParamMap, ParamSchema } from '../types'
 import { bool, num, str } from '../types'
-import { DRUM_BANK_OPTIONS } from '../drums'
 import {
   DEFAULT_STRUDEL_SOUND,
   pickStrudelSound,
@@ -36,14 +35,8 @@ export const coreInstruments = {
     label: 'Drum kit',
     defaultParams: { bank: 'RolandTR909', gain: 0.72, crunch: 0 },
     schema: [
-      {
-        key: 'bank',
-        type: 'select',
-        label: 'Bank',
-        options: [...DRUM_BANK_OPTIONS],
-      },
-      { key: 'gain', type: 'slider', label: 'Gain', min: 0, max: 1, step: 0.01 },
-      { key: 'crunch', type: 'slider', label: 'Crunch', min: 0, max: 0.6, step: 0.01 },
+      { key: 'gain', type: 'slider', label: 'Gain', min: 0, max: 1, step: 0.05 },
+      { key: 'crunch', type: 'slider', label: 'Crunch', min: 0, max: 0.6, step: 0.1 },
     ],
     render: (expr, params) => {
       const crunch = num(params, 'crunch', 0)

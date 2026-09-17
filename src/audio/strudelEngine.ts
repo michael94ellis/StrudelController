@@ -58,7 +58,7 @@ const DIRT_BASE =
   'https://raw.githubusercontent.com/tidalcycles/Dirt-Samples/master/'
 
 /** Ordered fallbacks — first kit that actually serves audio wins. */
-const DRUM_KIT_CANDIDATES: Array<{
+type DrumKitCandidate = {
   id: string
   kind: 'inline' | 'map'
   /** Inline mini-map (relative paths + base) */
@@ -69,7 +69,26 @@ const DRUM_KIT_CANDIDATES: Array<{
   bank?: string
   /** Keys inside a machine map to promote to bd/sd/hh aliases */
   aliasFrom?: { bd: string; sd: string; hh: string }
-}> = [
+}
+
+function machineKitCandidate(bank: string): DrumKitCandidate {
+  return {
+    id: bank,
+    kind: 'map',
+    mapUrl: bank === 'EmuSP12' ? EMU_SP12_JSON : TIDE_DRUM_MACHINES_JSON,
+    bank,
+    aliasFrom:
+      bank === 'EmuSP12'
+        ? { bd: 'bd', sd: 'sd', hh: 'hh' }
+        : {
+            bd: `${bank}_bd`,
+            sd: `${bank}_sd`,
+            hh: `${bank}_hh`,
+          },
+  }
+}
+
+const DRUM_KIT_CANDIDATES: DrumKitCandidate[] = [
   {
     id: 'dirt-mini',
     kind: 'inline',
@@ -103,58 +122,12 @@ const DRUM_KIT_CANDIDATES: Array<{
     kind: 'map',
     mapUrl: 'github:tidalcycles/dirt-samples',
   },
-  {
-    id: '909',
-    kind: 'map',
-    mapUrl: TIDE_DRUM_MACHINES_JSON,
-    bank: 'RolandTR909',
-    aliasFrom: {
-      bd: 'RolandTR909_bd',
-      sd: 'RolandTR909_sd',
-      hh: 'RolandTR909_hh',
-    },
-  },
-  {
-    id: '808',
-    kind: 'map',
-    mapUrl: TIDE_DRUM_MACHINES_JSON,
-    bank: 'RolandTR808',
-    aliasFrom: {
-      bd: 'RolandTR808_bd',
-      sd: 'RolandTR808_sd',
-      hh: 'RolandTR808_hh',
-    },
-  },
-  {
-    id: 'linn',
-    kind: 'map',
-    mapUrl: TIDE_DRUM_MACHINES_JSON,
-    bank: 'AkaiLinn',
-    aliasFrom: {
-      bd: 'AkaiLinn_bd',
-      sd: 'AkaiLinn_sd',
-      hh: 'AkaiLinn_hh',
-    },
-  },
-  {
-    id: 'mpc60',
-    kind: 'map',
-    mapUrl: TIDE_DRUM_MACHINES_JSON,
-    bank: 'AkaiMPC60',
-    aliasFrom: {
-      bd: 'AkaiMPC60_bd',
-      sd: 'AkaiMPC60_sd',
-      hh: 'AkaiMPC60_hh',
-    },
-  },
-  {
-    id: 'emusp12',
-    kind: 'map',
-    mapUrl: EMU_SP12_JSON,
-    bank: 'EmuSP12',
-    /** JSON already uses bd / sd / hh keys */
-    aliasFrom: { bd: 'bd', sd: 'sd', hh: 'hh' },
-  },
+  // Classic kits preferred as explicit fallbacks when bank load fails mid-list
+  machineKitCandidate('RolandTR909'),
+  machineKitCandidate('RolandTR808'),
+  machineKitCandidate('AkaiLinn'),
+  machineKitCandidate('AkaiMPC60'),
+  machineKitCandidate('EmuSP12'),
 ]
 
 export function isPlaying() {
@@ -182,7 +155,7 @@ function joinUrl(base: string, path: string): string {
   return `${base.replace(/\/?$/, '/')}${path.replace(/^\//, '')}`
 }
 
-async function loadInlineKit(candidate: (typeof DRUM_KIT_CANDIDATES)[number]): Promise<boolean> {
+async function loadInlineKit(candidate: DrumKitCandidate): Promise<boolean> {
   const inline = candidate.inline
   if (!inline) return false
   const kick = inline.map.bd?.[0]
@@ -223,7 +196,7 @@ async function registerMapUrls(urls: string[]): Promise<boolean> {
   return false
 }
 
-async function loadMapKit(candidate: (typeof DRUM_KIT_CANDIDATES)[number]): Promise<boolean> {
+async function loadMapKit(candidate: DrumKitCandidate): Promise<boolean> {
   if (!candidate.mapUrl) return false
 
   const mapUrls =
@@ -284,13 +257,41 @@ async function loadMapKit(candidate: (typeof DRUM_KIT_CANDIDATES)[number]): Prom
   } else {
     await samples({ hh: DIRT_HH, ch: DIRT_HH }, DIRT_BASE, { prebake: true })
   }
-  const cpPaths = pick('RolandTR909_cp').length
-    ? pick('RolandTR909_cp')
-    : pick('cp').length
-      ? pick('cp')
-      : []
+  const cpKey = candidate.bank ? `${candidate.bank}_cp` : 'cp'
+  const ohKey = candidate.bank ? `${candidate.bank}_oh` : 'oh'
+  const rimKey = candidate.bank ? `${candidate.bank}_rim` : 'rim'
+  const shKey = candidate.bank ? `${candidate.bank}_sh` : 'sh'
+  const cpPaths = pick(cpKey).length
+    ? pick(cpKey)
+    : pick('RolandTR909_cp').length
+      ? pick('RolandTR909_cp')
+      : pick('cp')
   if (cpPaths.length) {
     await samples({ cp: cpPaths }, base, { prebake: true })
+  } else {
+    await samples({ cp: ['cp/HANDCLP0.wav'] }, DIRT_BASE, { prebake: true })
+  }
+
+  const ohPaths = pick(ohKey).length ? pick(ohKey) : pick('oh')
+  if (ohPaths.length) {
+    await samples({ oh: ohPaths }, base, { prebake: true })
+  } else {
+    await samples({ oh: ['808oh/OH00.WAV'] }, DIRT_BASE, { prebake: true })
+  }
+
+  const rimPaths = pick(rimKey).length ? pick(rimKey) : pick('rim')
+  if (rimPaths.length) {
+    await samples({ rim: rimPaths }, base, { prebake: true })
+  } else {
+    // Dirt has no `rim` — cowbell is a clear clicky spice substitute
+    await samples({ rim: ['cb/rytm-cb.wav'] }, DIRT_BASE, { prebake: true })
+  }
+
+  const shPaths = pick(shKey).length ? pick(shKey) : pick('sh')
+  if (shPaths.length) {
+    await samples({ sh: shPaths }, base, { prebake: true })
+  } else {
+    await samples({ sh: ['perc/000_perc0.wav'] }, DIRT_BASE, { prebake: true })
   }
 
   drumPlayback = {
@@ -317,6 +318,9 @@ async function loadDirtAliasKit(id: string): Promise<boolean> {
       hh: DIRT_HH,
       ch: DIRT_HH,
       cp: ['cp/HANDCLP0.wav'],
+      oh: ['808oh/OH00.WAV'],
+      rim: ['cb/rytm-cb.wav'],
+      sh: ['perc/000_perc0.wav'],
     },
     DIRT_BASE,
     { prebake: true },
@@ -326,14 +330,12 @@ async function loadDirtAliasKit(id: string): Promise<boolean> {
   return true
 }
 
-function candidatesForBank(bank: string | undefined): (typeof DRUM_KIT_CANDIDATES)[number][] {
+function candidatesForBank(bank: string | undefined): DrumKitCandidate[] {
   const inline = DRUM_KIT_CANDIDATES.filter((c) => c.kind === 'inline')
   if (!bank) return [...DRUM_KIT_CANDIDATES]
-  const match = DRUM_KIT_CANDIDATES.filter((c) => c.bank === bank)
-  const rest = DRUM_KIT_CANDIDATES.filter(
-    (c) => c.bank !== bank && c.kind !== 'inline',
-  )
-  return [...match, ...inline, ...rest]
+  const preferred = machineKitCandidate(bank)
+  const rest = DRUM_KIT_CANDIDATES.filter((c) => c.bank !== bank && c.kind !== 'inline')
+  return [preferred, ...inline, ...rest]
 }
 
 /**

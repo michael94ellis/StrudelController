@@ -6,8 +6,14 @@ import { instrumentDefs } from '../instruments/registry'
 import { withStrudelDefaults } from '../strudelSounds'
 import { GENRES, getGenre } from '../genres'
 import type { GenreLayer, GenreModule } from '../genres'
+import {
+  patternStyleIdsForLayer,
+  progressionToChordStyles,
+} from '../layerStyles'
 
 function layerFrom(spec: GenreLayer, beatProgressionId: string): BeatLayer {
+  const progressionId = spec.progressionId ?? beatProgressionId
+  const chord = progressionToChordStyles(progressionId)
   return {
     id: newId('layer'),
     name: spec.name,
@@ -19,7 +25,10 @@ function layerFrom(spec: GenreLayer, beatProgressionId: string): BeatLayer {
     }),
     generator: spec.generator,
     params: { ...generatorDefs[spec.generator].defaultParams, ...spec.params },
-    progressionId: spec.progressionId ?? beatProgressionId,
+    progressionId,
+    patternStyleIds: patternStyleIdsForLayer(spec.generator, spec.kind),
+    chordStyleIds: chord.chordStyleIds,
+    chordLength: chord.chordLength,
   }
 }
 
@@ -103,6 +112,7 @@ export function withKind(layer: BeatLayer, kind: InstrumentKind): BeatLayer {
     instrumentParams: { ...def.defaultParams },
     generator,
     params: { ...generatorDefs[generator].defaultParams },
+    patternStyleIds: patternStyleIdsForLayer(generator, kind),
   }
 }
 
@@ -111,5 +121,6 @@ export function withGenerator(layer: BeatLayer, generator: GeneratorName): BeatL
     ...layer,
     generator,
     params: { ...generatorDefs[generator].defaultParams },
+    patternStyleIds: patternStyleIdsForLayer(generator, layer.kind),
   }
 }
