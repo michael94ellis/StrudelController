@@ -1,4 +1,5 @@
 import type { GenreModule } from './types'
+import { drumMini } from '../drums'
 import { notePerBar } from '../pattern'
 import { num } from '../types'
 import { SWUNG } from './helpers'
@@ -33,7 +34,7 @@ export const videogame: GenreModule = {
         const kick = e > 0.65 ? 'bd ~ bd ~ bd ~ bd ~' : 'bd ~ ~ ~ bd ~ ~ ~'
         const snare = '~ ~ sd ~ ~ ~ sd ~'
         const hats = e > 0.6 ? 'hh*8' : 'hh ~ hh ~ hh ~ hh ~'
-        return `stack(s("${kick}"), s("${snare}"), s("${hats}"))`
+        return drumMini(kick, snare, hats)
       },
     },
 

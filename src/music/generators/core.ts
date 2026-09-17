@@ -1,6 +1,8 @@
 import type { GeneratorName, HarmonyCtx, ParamMap, ParamSchema } from '../types'
 import { num, str } from '../types'
+import { drumMini, drumPerBar } from '../drums'
 import { notePerBar, notePerBarStruct } from '../pattern'
+import { pickBar } from '../variation'
 
 export type GeneratorDef = {
   name: GeneratorName
@@ -15,13 +17,6 @@ export type GeneratorDef = {
 
 /** Partial registry — what a module (core or genre) contributes. */
 export type GeneratorTable = Partial<Record<GeneratorName, GeneratorDef>>
-
-function densify(pattern: string, density: number): string {
-  // density 0–1: occasionally insert rests by replacing some hits
-  if (density >= 0.95) return pattern
-  // Keep as-is for now; density used by specific generators
-  return pattern
-}
 
 /**
  * Genre-agnostic building blocks. Anything that only makes sense for one
@@ -38,16 +33,22 @@ export const coreGenerators = {
       { key: 'density', type: 'slider', label: 'Density', min: 0.3, max: 1, step: 0.05 },
       { key: 'openHats', type: 'toggle', label: 'Open hats' },
     ],
-    generate: (_ctx, params) => {
+    generate: (ctx, params) => {
       const dens = num(params, 'density', 0.85)
       const open = params.openHats === true
       const kick = dens > 0.5 ? 'bd*4' : 'bd ~ bd ~'
       const snare = dens > 0.7 ? '~ sd ~ sd' : '~ sd ~ ~'
-      // Prefer closed hats — `oh` sample paths are flaky across drum banks
-      const hats = open
-        ? densify('hh hh hh*2 hh hh hh*2 hh', dens)
-        : densify('hh*8', dens)
-      return `stack(s("${kick}"), s("${snare}"), s("${hats}"))`
+      const hats = open ? 'hh hh hh*2 hh hh hh*2 hh' : 'hh*8'
+
+      if (ctx.bars <= 1) return drumMini(kick, snare, hats)
+
+      const bars = ctx.roots.map((_, i) => {
+        const k = pickBar(ctx.variation, i, [kick, 'bd ~ bd ~ bd ~ bd', 'bd*4'])
+        const s = pickBar(ctx.variation, i, [snare, '~ ~ sd ~ ~ ~ sd ~', snare])
+        const h = pickBar(ctx.variation, i, [hats, 'hh*16', '~ hh ~ hh ~ hh ~ hh'])
+        return `${k}, ${s}, ${h}`
+      })
+      return drumPerBar(bars)
     },
   },
 
@@ -60,7 +61,7 @@ export const coreGenerators = {
     generate: (_ctx, params) => {
       const dens = num(params, 'density', 0.75)
       const kick = dens > 0.8 ? 'bd ~ bd bd ~ bd ~ bd' : 'bd ~ ~ bd ~ bd ~ ~'
-      return `stack(s("${kick}"), s("~ sd ~ [sd ~] ~ sd ~ sd"), s("hh*8"))`
+      return drumMini(kick, '~ sd ~ [sd ~] ~ sd ~ sd', 'hh*8')
     },
   },
 
@@ -75,7 +76,7 @@ export const coreGenerators = {
       const kick = dens > 0.5 ? 'bd ~ ~ ~ bd ~ ~ ~' : 'bd ~ ~ ~ ~ ~ ~ ~'
       const snare = '~ ~ sd ~ ~ ~ sd ~'
       const hats = dens > 0.4 ? 'hh ~ hh ~ hh ~ hh ~' : 'hh ~ ~ ~ hh ~ ~ ~'
-      return `stack(s("${kick}"), s("${snare}"), s("${hats}"))`
+      return drumMini(kick, snare, hats)
     },
   },
 
@@ -241,9 +242,26 @@ export const coreGenerators = {
         const a = t[0].replace(/\d+$/, String(oct))
         const b = t[1].replace(/\d+$/, String(oct))
         const c = t[2].replace(/\d+$/, String(oct))
-        if (dens < 0.45) return i % 2 === 0 ? `${a} ~ ~ ~` : `~ ${b} ~ ~`
-        if (dens < 0.7) return `${a} ~ ${b} ~ ${c} ~ ${a} ~`
-        return `${a} ${b} ${c} ${a} ${b} ~ ${c} ${a}`
+        const fifth = t[2].replace(/\d+$/, String(oct + 1))
+        if (dens < 0.45) {
+          return pickBar(ctx.variation, i, [
+            i % 2 === 0 ? `${a} ~ ~ ~` : `~ ${b} ~ ~`,
+            `${a} ~ ~ ${b}`,
+            `~ ~ ${a} ~`,
+          ])
+        }
+        if (dens < 0.7) {
+          return pickBar(ctx.variation, i, [
+            `${a} ~ ${b} ~ ${c} ~ ${a} ~`,
+            `${a} ${b} ~ ${c} ~`,
+            `${b} ~ ${a} ~ ${c} ~`,
+          ])
+        }
+        return pickBar(ctx.variation, i, [
+          `${a} ${b} ${c} ${a} ${b} ~ ${c} ${a}`,
+          `${a} ${c} ${b} ${fifth} ${c} ~ ${b} ${a}`,
+          `${a} ~ ${b} ${c} ${b} ${a} ${c} ~`,
+        ])
       })
       return notePerBar(phrase)
     },

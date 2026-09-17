@@ -1,15 +1,74 @@
-import type { Beat } from './types'
-import { createBeat } from './beats/build'
+import type { Beat, BeatLayer } from './types'
+import { applyGenre, createBeat } from './beats/build'
 import { DEFAULT_PROGRESSION_ID, getProgression } from './theory'
 import { withStrudelDefaults } from './strudelSounds'
 
 const STORAGE_KEY = 'beat-studio:beats'
-const STORAGE_VERSION = 7
+const STORAGE_VERSION = 11
 
 export type BeatLibrary = {
   version: number
   activeBeatId: string
   beats: Beat[]
+}
+
+type LegacyKnobs = {
+  energy?: number
+  density?: number
+  groove?: number
+  brightness?: number
+}
+
+type LegacyLayer = BeatLayer & {
+  energy?: number
+  density?: number
+}
+
+type LegacyBeat = Beat & {
+  progressionId?: string
+  knobs?: LegacyKnobs
+  layers: LegacyLayer[]
+}
+
+function normalizeLayer(layer: LegacyLayer, beatProgressionId: string): BeatLayer {
+  const { energy: _e, density: _d, ...rest } = layer
+  return {
+    ...rest,
+    progressionId: layer.progressionId ?? beatProgressionId,
+  }
+}
+
+function finalizeBeat(b: LegacyBeat): Beat {
+  const beatProg = b.progressionId ?? DEFAULT_PROGRESSION_ID
+  const layers = b.layers.map((layer) => normalizeLayer(layer, beatProg))
+  const { progressionId: _p, knobs: _k, ...rest } = b
+  return { ...rest, layers, variation: b.variation ?? 0 }
+}
+
+function migrateBeat(beat: LegacyBeat, fromVersion: number): Beat {
+  let b = beat
+
+  if (fromVersion < 6) {
+    const bars = getProgression(b.progressionId ?? DEFAULT_PROGRESSION_ID).chords.length
+    if (bars < 8) b = { ...b, progressionId: DEFAULT_PROGRESSION_ID }
+  }
+  if (fromVersion < 7) {
+    b = {
+      ...b,
+      layers: b.layers.map((layer) => ({
+        ...layer,
+        instrumentParams: withStrudelDefaults(layer.kind, layer.instrumentParams),
+      })),
+    }
+  }
+  if (fromVersion < 8) {
+    if (b.genreId === 'metal' || b.genreId === 'hardcore') {
+      b = { ...applyGenre(b as Beat, 'house'), name: b.name, progressionId: b.progressionId }
+    }
+    b = { ...b, variation: b.variation ?? 0 }
+  }
+
+  return finalizeBeat(b)
 }
 
 function seed(): BeatLibrary {
@@ -25,26 +84,10 @@ export function loadLibrary(): BeatLibrary {
     if (!parsed || !Array.isArray(parsed.beats) || parsed.beats.length === 0) {
       return seed()
     }
-    let beats = parsed.beats
-    if (parsed.version !== STORAGE_VERSION) {
-      beats = beats.map((b) => {
-        let beat = b
-        if (parsed.version < 6) {
-          const bars = getProgression(beat.progressionId).chords.length
-          if (bars < 8) beat = { ...beat, progressionId: DEFAULT_PROGRESSION_ID }
-        }
-        if (parsed.version < 7) {
-          beat = {
-            ...beat,
-            layers: beat.layers.map((layer) => ({
-              ...layer,
-              instrumentParams: withStrudelDefaults(layer.kind, layer.instrumentParams),
-            })),
-          }
-        }
-        return beat
-      })
-    }
+    let beats =
+      parsed.version !== STORAGE_VERSION
+        ? parsed.beats.map((b) => migrateBeat(b as LegacyBeat, parsed.version ?? 0))
+        : parsed.beats.map((b) => finalizeBeat(b as LegacyBeat))
     const activeBeatId = beats.some((b) => b.id === parsed.activeBeatId)
       ? parsed.activeBeatId
       : beats[0].id

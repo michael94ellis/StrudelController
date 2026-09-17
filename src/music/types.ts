@@ -87,25 +87,6 @@ export type Progression = {
   chords: ChordSpec[]
 }
 
-/** User-facing variation knobs, all 0–1. Applied at compile time. */
-export type BeatKnobs = {
-  /** Overall intensity / gain fullness */
-  energy: number
-  /** How busy patterns are */
-  density: number
-  /** Swing / pocket (maps into the genre's swing model) */
-  groove: number
-  /** Brightness / filter openness */
-  brightness: number
-}
-
-export const DEFAULT_KNOBS: BeatKnobs = {
-  energy: 0.6,
-  density: 0.6,
-  groove: 0.4,
-  brightness: 0.5,
-}
-
 /**
  * One voice in a loop: a sample kit / synth voice (`kind` + `instrumentParams`)
  * playing a pattern (`generator` + `params`).
@@ -116,13 +97,16 @@ export type BeatLayer = {
   enabled: boolean
   kind: InstrumentKind
   instrumentParams: ParamMap
+  /** Rhythm / voicing algorithm for this voice. */
   generator: GeneratorName
   params: ParamMap
+  /** Chord sequence for this voice — one chord per bar (`PROGRESSIONS` in theory). */
+  progressionId: string
 }
 
 /**
- * A beat is a single loop. Its length is the chord progression length —
- * generators emit `note("<c1 c2 c3 c4>")`, one chord per cycle.
+ * A beat is a single loop. Each layer carries its own chord pattern length;
+ * layers may cycle at different lengths when stacked in Strudel.
  */
 export type Beat = {
   id: string
@@ -132,8 +116,8 @@ export type Beat = {
   bpm: number
   key: string
   scale: string
-  progressionId: string
-  knobs: BeatKnobs
+  /** Bumps on “Shuffle patterns” — generators use this for bar-to-bar variation. */
+  variation: number
   layers: BeatLayer[]
 }
 
@@ -142,6 +126,10 @@ export type HarmonyCtx = {
   scale: string
   bpm: number
   swing: number
+  /** Loop length in bars (chord progression length). */
+  bars: number
+  /** Changes when the user shuffles — alters fills and phrase choices. */
+  variation: number
   /** Absolute chord names for one cycle of the progression (display / legacy) */
   chordNames: string[]
   /** Root notes per bar, e.g. f2 d2 bb1 c2 */

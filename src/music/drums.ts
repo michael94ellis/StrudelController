@@ -18,3 +18,22 @@ export function preferredDrumBank(beat: Beat): DrumBankId {
   if (DRUM_BANK_OPTIONS.some((o) => o.value === bank)) return bank as DrumBankId
   return 'RolandTR909'
 }
+
+/**
+ * One `s("…")` mini pattern for all drum lanes — keeps kick/snare/hat on the
+ * same clock (stacked `s()` layers can drift a hair at loop boundaries).
+ */
+export function drumMini(...lanes: string[]): string {
+  return `s("${lanes.join(', ')}")`
+}
+
+/**
+ * One drum bar per cycle — matches harmonic `note("< … >")` loop length.
+ * Each entry is comma-separated lanes (same as `drumMini` without the `s()`).
+ */
+export function drumPerBar(barMinis: string[]): string {
+  if (barMinis.length === 0) return 'silence'
+  if (barMinis.length === 1) return `s("${barMinis[0]}")`
+  const inner = barMinis.map((bar) => `[${bar}]`).join(' ')
+  return `s("<${inner}>")`
+}

@@ -1,12 +1,13 @@
 import type { Beat, BeatLayer, GeneratorName, InstrumentKind } from '../types'
-import { DEFAULT_KNOBS, newId } from '../types'
+import { newId } from '../types'
+import { DEFAULT_PROGRESSION_ID } from '../theory'
 import { generatorDefs } from '../generators/registry'
 import { instrumentDefs } from '../instruments/registry'
 import { withStrudelDefaults } from '../strudelSounds'
 import { GENRES, getGenre } from '../genres'
 import type { GenreLayer, GenreModule } from '../genres'
 
-function layerFrom(spec: GenreLayer): BeatLayer {
+function layerFrom(spec: GenreLayer, beatProgressionId: string): BeatLayer {
   return {
     id: newId('layer'),
     name: spec.name,
@@ -18,6 +19,7 @@ function layerFrom(spec: GenreLayer): BeatLayer {
     }),
     generator: spec.generator,
     params: { ...generatorDefs[spec.generator].defaultParams, ...spec.params },
+    progressionId: spec.progressionId ?? beatProgressionId,
   }
 }
 
@@ -31,7 +33,10 @@ export function generatorsFor(kind: InstrumentKind): GeneratorName[] {
 /** A fresh layer for `kind`, using the first generator that suits it. */
 export function defaultLayer(kind: InstrumentKind): BeatLayer {
   const generator = generatorsFor(kind)[0]
-  const layer = layerFrom({ name: instrumentDefs[kind].label, kind, generator })
+  const layer = layerFrom(
+    { name: instrumentDefs[kind].label, kind, generator },
+    DEFAULT_PROGRESSION_ID,
+  )
   return {
     ...layer,
     instrumentParams: withStrudelDefaults(kind, layer.instrumentParams),
@@ -41,7 +46,7 @@ export function defaultLayer(kind: InstrumentKind): BeatLayer {
 /** The layer stack a genre starts from, with fresh ids. */
 export function layersForGenre(genreId: string): BeatLayer[] {
   const genre = getGenre(genreId) ?? GENRES[0]
-  return genre.layers.map(layerFrom)
+  return genre.layers.map((l) => layerFrom(l, genre.defaultProgressionId))
 }
 
 export function createBeat(genreId?: string, name?: string): Beat {
@@ -53,13 +58,12 @@ export function createBeat(genreId?: string, name?: string): Beat {
     bpm: genre.bpm,
     key: genre.key,
     scale: genre.scale,
-    progressionId: genre.defaultProgressionId,
-    knobs: { ...DEFAULT_KNOBS },
+    variation: 0,
     layers: layersForGenre(genre.id),
   }
 }
 
-/** Re-template a beat onto another genre, keeping its name and knobs. */
+/** Re-template a beat onto another genre, keeping its name. */
 export function applyGenre(beat: Beat, genreId: string): Beat {
   const genre = getGenre(genreId)
   if (!genre) return beat
@@ -69,8 +73,8 @@ export function applyGenre(beat: Beat, genreId: string): Beat {
     bpm: genre.bpm,
     key: genre.key,
     scale: genre.scale,
-    progressionId: genre.defaultProgressionId,
-    layers: genre.layers.map(layerFrom),
+    variation: 0,
+    layers: genre.layers.map((l) => layerFrom(l, genre.defaultProgressionId)),
   }
 }
 
@@ -81,6 +85,7 @@ export function duplicateLayer(layer: BeatLayer): BeatLayer {
     name: `${layer.name} copy`,
     instrumentParams: { ...layer.instrumentParams },
     params: { ...layer.params },
+    progressionId: layer.progressionId,
   }
 }
 

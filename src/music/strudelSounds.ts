@@ -1,4 +1,5 @@
 import type { InstrumentKind, ParamMap } from './types'
+import { CURATED_MELODIC_SAMPLES } from './curatedSamples'
 
 /** Built-in synth / noise / zzfx names (Strudel `registerSynthSounds` + friends). */
 export const SYNTH_SOUNDS = [
@@ -160,16 +161,10 @@ export const GM_SOUNDS = [
 
 export const SAMPLE_MAP_SOUNDS = ['piano'] as const
 
-function option(value: string) {
-  return { value, label: value }
-}
-
-/** Full Strudel `s()` picker — matches the web REPL registry after prebake. */
+/** Strudel `s()` picker — curated catalog (custom names still work via text field). */
 export const STRUDEL_SOUND_OPTIONS = [
   { value: '', label: '(layer default)' },
-  ...SYNTH_SOUNDS.map(option),
-  ...SAMPLE_MAP_SOUNDS.map(option),
-  ...GM_SOUNDS.map(option),
+  ...CURATED_MELODIC_SAMPLES.map((s) => ({ value: s.value, label: s.label })),
 ]
 
 export const STRUDEL_SOUND_SCHEMA = {

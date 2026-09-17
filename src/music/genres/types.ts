@@ -11,6 +11,8 @@ export type GenreLayer = {
   generator: GeneratorName
   /** Pattern params for the generator */
   params?: ParamMap
+  /** Override default chord pattern for this layer */
+  progressionId?: string
 }
 
 /** How the groove knob maps to swing: base + groove * range. */

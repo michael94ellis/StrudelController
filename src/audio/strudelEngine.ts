@@ -6,7 +6,10 @@ import {
   getAudioContext,
   resetGlobalEffects,
 } from '@strudel/web'
+import { installStrudelLoggerFilter } from './strudelLogger'
 import { registerStrudelSounds } from './strudelPrebake'
+
+installStrudelLoggerFilter()
 
 let ready: Promise<void> | null = null
 let playing = false

@@ -155,7 +155,7 @@ export function seventhNotes(key: string, spec: ChordSpec, octave = 4): string[]
 }
 
 export function resolveHarmony(
-  beat: Pick<Beat, 'key' | 'scale' | 'bpm'>,
+  beat: Pick<Beat, 'key' | 'scale' | 'bpm' | 'variation'>,
   progression: Progression,
   swing: number,
 ): HarmonyCtx {
@@ -168,6 +168,8 @@ export function resolveHarmony(
     scale: beat.scale,
     bpm: beat.bpm,
     swing,
+    bars: progression.chords.length,
+    variation: beat.variation ?? 0,
     chordNames,
     roots,
     triads,

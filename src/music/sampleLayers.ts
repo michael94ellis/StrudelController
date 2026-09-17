@@ -2,7 +2,12 @@ import type { BeatLayer, InstrumentKind } from './types'
 import { DRUM_BANK_OPTIONS, type DrumBankId } from './drums'
 import { defaultLayer, generatorsFor, withKind } from './beats/build'
 import { instrumentDefs } from './instruments/registry'
-import { GM_SOUNDS, SYNTH_SOUNDS, SAMPLE_MAP_SOUNDS, DEFAULT_STRUDEL_SOUND } from './strudelSounds'
+import {
+  buildCuratedSampleOptionGroups,
+  curatedDrumLabel,
+  curatedMelodicLabel,
+} from './curatedSamples'
+import { DEFAULT_STRUDEL_SOUND } from './strudelSounds'
 
 export type SampleOptionGroup = {
   label: string
@@ -61,9 +66,30 @@ export function kindForSample(sample: string): InstrumentKind {
     s.startsWith('gm_glockenspiel') ||
     s.startsWith('gm_music_box') ||
     s.startsWith('gm_tinkle_bell') ||
-    s.startsWith('gm_steel_drums')
+    s.startsWith('gm_steel_drums') ||
+    s.startsWith('gm_kalimba') ||
+    s.startsWith('gm_taiko_drum')
   ) {
     return 'bell'
+  }
+  if (
+    s.startsWith('gm_alto_sax') ||
+    s.startsWith('gm_tenor_sax') ||
+    s.startsWith('gm_baritone_sax') ||
+    s.startsWith('gm_soprano_sax') ||
+    s.startsWith('gm_trumpet') ||
+    s.startsWith('gm_muted_trumpet') ||
+    s.startsWith('gm_trombone') ||
+    s.startsWith('gm_brass_section') ||
+    s.startsWith('gm_flute') ||
+    s.startsWith('gm_clarinet') ||
+    s.startsWith('gm_harmonica') ||
+    s.startsWith('gm_orchestra_hit')
+  ) {
+    return 'lead'
+  }
+  if (s.startsWith('gm_overdriven_guitar') || s.startsWith('gm_distortion_guitar')) {
+    return 'guitar'
   }
   if (
     s === 'brown' ||
@@ -84,10 +110,10 @@ export function kindForSample(sample: string): InstrumentKind {
 export function sampleLabel(sampleId: string): string {
   if (isDrumSampleId(sampleId)) {
     const bank = drumBankFromSampleId(sampleId)
-    const match = DRUM_BANK_OPTIONS.find((o) => o.value === bank)
-    return match ? `Drums · ${match.label}` : 'Drums'
+    if (bank) return curatedDrumLabel(bank)
+    return 'Drums'
   }
-  return sampleId
+  return curatedMelodicLabel(sampleId) ?? sampleId
 }
 
 /** Current sample id for UI (drum bank or strudelSound). */
@@ -155,27 +181,7 @@ export function createLayerFromSample(sampleId: string, name?: string): BeatLaye
   }
 }
 
-export const SAMPLE_OPTION_GROUPS: SampleOptionGroup[] = [
-  {
-    label: 'Drum machines',
-    options: DRUM_BANK_OPTIONS.map((o) => ({
-      value: drumSampleId(o.value),
-      label: `Drums · ${o.label}`,
-    })),
-  },
-  {
-    label: 'Synth & noise',
-    options: SYNTH_SOUNDS.map((s) => ({ value: s, label: s })),
-  },
-  {
-    label: 'Sample maps',
-    options: SAMPLE_MAP_SOUNDS.map((s) => ({ value: s, label: s })),
-  },
-  {
-    label: 'General MIDI (GM)',
-    options: GM_SOUNDS.map((s) => ({ value: s, label: s })),
-  },
-]
+export const SAMPLE_OPTION_GROUPS: SampleOptionGroup[] = buildCuratedSampleOptionGroups()
 
 export const ALL_SAMPLE_IDS: string[] = SAMPLE_OPTION_GROUPS.flatMap((g) =>
   g.options.map((o) => o.value),

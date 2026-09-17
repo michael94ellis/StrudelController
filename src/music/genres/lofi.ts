@@ -1,4 +1,5 @@
 import type { GenreModule } from './types'
+import { drumMini } from '../drums'
 import { num } from '../types'
 import { SWUNG } from './helpers'
 
@@ -38,7 +39,7 @@ export const lofi: GenreModule = {
             : e > 0.4
               ? 'hh ~ hh ~ hh ~ hh ~'
               : 'hh ~ ~ ~ hh ~ ~ ~'
-        return `stack(s("${kick}"), s("${snare}"), s("${hats}"))`
+        return drumMini(kick, snare, hats)
       },
     },
 

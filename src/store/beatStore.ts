@@ -1,12 +1,5 @@
 import { create } from 'zustand'
-import type {
-  Beat,
-  BeatKnobs,
-  BeatLayer,
-  GeneratorName,
-  InstrumentKind,
-  ParamValue,
-} from '../music/types'
+import type { Beat, BeatLayer, GeneratorName, InstrumentKind, ParamValue } from '../music/types'
 import { newId } from '../music/types'
 import { compileBeat } from '../music/compile'
 import { loadLibrary, saveLibrary, uniqueBeatName } from '../music/library'
@@ -47,8 +40,9 @@ type BeatState = {
   setBpm: (bpm: number) => void
   setKey: (key: string) => void
   setScale: (scale: string) => void
-  setProgression: (progressionId: string) => void
-  setKnob: (key: keyof BeatKnobs, value: number) => void
+  setLayerProgression: (layerId: string, progressionId: string) => void
+  /** New bar fills / phrase shapes without changing genre or harmony. */
+  shuffleVariation: () => void
 
   addLayerFromSample: (sampleId: string) => void
   setLayerSample: (id: string, sampleId: string) => void
@@ -145,8 +139,12 @@ export const useBeatStore = create<BeatState>((set, get) => {
         ...source,
         id: newId('beat'),
         name: uniqueBeatName(`${source.name} copy`, s.beats),
-        knobs: { ...source.knobs },
-        layers: source.layers.map((l) => ({ ...copyLayer(l), name: l.name })),
+        variation: source.variation,
+        layers: source.layers.map((l) => ({
+          ...copyLayer(l),
+          name: l.name,
+          progressionId: l.progressionId,
+        })),
       }
       activate(beat, [...s.beats, beat])
     },
@@ -179,9 +177,9 @@ export const useBeatStore = create<BeatState>((set, get) => {
     setBpm: (bpm) => patch((beat) => ({ ...beat, bpm })),
     setKey: (key) => patch((beat) => ({ ...beat, key })),
     setScale: (scale) => patch((beat) => ({ ...beat, scale })),
-    setProgression: (progressionId) => patch((beat) => ({ ...beat, progressionId })),
-    setKnob: (key, value) =>
-      patch((beat) => ({ ...beat, knobs: { ...beat.knobs, [key]: value } })),
+    setLayerProgression: (layerId, progressionId) =>
+      patchLayer(layerId, (l) => ({ ...l, progressionId })),
+    shuffleVariation: () => patch((beat) => ({ ...beat, variation: beat.variation + 1 })),
 
     addLayerFromSample: (sampleId) => {
       const layer = createLayerFromSample(sampleId)

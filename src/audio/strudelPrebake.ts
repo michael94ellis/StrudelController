@@ -1,3 +1,4 @@
+import { registerSoundfonts } from '@strudel/soundfonts'
 import { registerSynthSounds, registerZZFXSounds, samples } from '@strudel/web'
 
 const DOUGH_RAW = 'https://raw.githubusercontent.com/felixroos/dough-samples/main'
@@ -35,7 +36,6 @@ export async function registerStrudelSounds(): Promise<void> {
   registerSynthSounds()
   registerZZFXSounds()
   try {
-    const { registerSoundfonts } = await import('@strudel/soundfonts')
     registerSoundfonts()
   } catch (err) {
     console.warn('[beat-studio] GM soundfonts failed to register', err)

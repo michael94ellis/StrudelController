@@ -4,6 +4,14 @@ declare module '@strudel/soundfonts' {
   export function registerSoundfonts(): void
 }
 
+declare module '@strudel/core' {
+  export const logger: (...args: unknown[]) => void
+}
+
+declare module 'superdough' {
+  export function setLogger(fn: (...args: unknown[]) => void): void
+}
+
 declare module '@strudel/web' {
   export function registerSynthSounds(): void
   export function registerZZFXSounds(): void

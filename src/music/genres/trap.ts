@@ -1,5 +1,7 @@
 import type { GenreModule } from './types'
+import { drumPerBar } from '../drums'
 import { notePerBar } from '../pattern'
+import { isFillBar, pickBar } from '../variation'
 import { num } from '../types'
 import { SWUNG } from './helpers'
 
@@ -28,25 +30,28 @@ export const trap: GenreModule = {
       suits: ['drumkit'],
       defaultParams: { energy: 0.8 },
       schema: [{ key: 'energy', type: 'slider', label: 'Energy', min: 0.3, max: 1, step: 0.05 }],
-      generate: (_ctx, params) => {
+      generate: (ctx, params) => {
         const e = num(params, 'energy', 0.8)
-        // 16th-feel in one cycle (8 slots ≈ 8th notes; use nested for rolls)
-        const kick =
-          e > 0.7
-            ? 'bd ~ ~ bd ~ ~ bd ~'
-            : e > 0.45
-              ? 'bd ~ ~ ~ ~ ~ bd ~'
-              : 'bd ~ ~ ~ ~ ~ ~ ~'
-        // Snare/clap on beat 3 (half-time)
+        const kickBusy = e > 0.7 ? 'bd ~ ~ bd ~ ~ bd ~' : 'bd ~ ~ ~ ~ ~ bd ~'
+        const kickSparse = 'bd ~ ~ ~ ~ ~ ~ ~'
         const snare = '~ ~ ~ ~ sd ~ ~ ~'
-        const hats =
-          e > 0.75
-            ? 'hh*16'
-            : e > 0.5
-              ? 'hh hh hh hh hh hh [hh hh] hh hh hh hh hh hh hh hh'
-              : 'hh ~ hh ~ hh ~ hh ~ hh ~ hh ~ hh ~ hh ~'
-        const hatPart = `s("${hats}").gain(1.12).hpf(280).clip(1)`
-        return `stack(s("${kick}"), s("${snare}"), ${hatPart})`
+        const hatRoll = 'hh*16'
+        const hatSync =
+          'hh hh hh hh hh hh [hh hh] hh hh hh hh hh hh hh hh'
+        const hatSparse = 'hh ~ hh ~ hh ~ hh ~ hh ~ hh ~ hh ~ hh ~'
+
+        const bars = ctx.roots.map((_, i) => {
+          const kick = pickBar(ctx.variation, i, [kickBusy, kickSparse, 'bd ~ ~ bd ~ ~ ~ ~'])
+          let lane = `${kick}, ${snare}, `
+          if (isFillBar(i)) {
+            lane += pickBar(ctx.variation, i, [hatRoll, '~ sd ~ sd ~ sd sd sd', hatSync])
+          } else {
+            lane += pickBar(ctx.variation, i, [hatSparse, hatSync, hatRoll])
+          }
+          return lane
+        })
+
+        return ctx.bars > 1 ? drumPerBar(bars) : `s("${bars[0]}")`
       },
     },
 

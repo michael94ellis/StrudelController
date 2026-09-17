@@ -53,12 +53,12 @@ export const coreInstruments = {
       // explicitly requested and we know machine-map playback is active.
       const useBank = source === 'bank' && drums?.mode === 'bank'
       if (!useBank) {
-        return `${expr}${gainLine(params, 'gain', 0.85)}.room(0.08).clip(1)${
+        return `${expr}${gainLine(params, 'gain', 0.85)}.room(0.08)${
           crunch > 0.01 ? `.distort(${crunch.toFixed(2)})` : ''
         }`
       }
       const bank = drums?.bank ?? str(params, 'bank', 'RolandTR909')
-      return `${expr}.bank("${bank}")${gainLine(params, 'gain', 0.72)}.room(0.12).clip(1)${
+      return `${expr}.bank("${bank}")${gainLine(params, 'gain', 0.72)}.room(0.12)${
         crunch > 0.01 ? `.distort(${crunch.toFixed(2)})` : ''
       }`
     },
