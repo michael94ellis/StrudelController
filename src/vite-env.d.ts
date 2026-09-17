@@ -2,6 +2,11 @@
 
 declare module '@strudel/soundfonts' {
   export function registerSoundfonts(): void
+  export function getFontBufferSource(
+    name: string,
+    value: { note?: string | number; freq?: number; n?: number },
+    ac: AudioContext,
+  ): Promise<AudioBufferSourceNode>
 }
 
 declare module '@strudel/core' {
@@ -37,7 +42,7 @@ declare module '@strudel/web' {
 
   /** Resolve a registered sound (sample bank, synth, etc.). */
   export function getSound(name: string): {
-    data?: { type?: string; samples?: unknown }
+    data?: { type?: string; samples?: unknown; fonts?: string[] }
   } | undefined
 
   /** Fetch + decode a sample URL into Strudel's buffer cache. */

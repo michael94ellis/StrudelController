@@ -24,7 +24,10 @@ function compileLayer(layer: BeatLayer, beat: Beat, swing: number): string | nul
   const { generator, params } = resolvePattern(layer)
   const pattern = generatePart(generator, harmony, params)
   let compiled = renderInstrument(layer.kind, pattern, layer.instrumentParams, beat.bpm)
-  if (layer.kind !== 'drumkit') {
+  // Keep stab grids straight — swing on offbeat chops reads as a stutter.
+  const straightGrid =
+    layer.kind === 'drumkit' || generator === 'houseStabs' || generator === 'chordStabs'
+  if (!straightGrid) {
     compiled = applySwing(compiled, swing)
   }
   return compiled

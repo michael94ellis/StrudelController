@@ -95,10 +95,10 @@ export const house: GenreModule = {
           .join(' ')
         const struct =
           dens < 0.45
-            ? 'x ~ ~ ~ ~ ~ x ~'
+            ? '~ x ~ ~ ~ x ~ ~'
             : dens < 0.7
-              ? 'x ~ x ~ ~ x ~ ~'
-              : 'x ~ x x ~ x ~ x'
+              ? '~ x ~ x ~ x ~ ~'
+              : '~ x ~ x ~ x ~ x'
         return `note("<${stacks}>").struct("${struct}")`
       },
     },
@@ -139,10 +139,10 @@ export const house: GenreModule = {
       instrumentParams: {
         strudelSound: 'gm_synth_brass_1',
         gain: 0.34,
-        room: 0.22,
+        room: 0.18,
         cutoff: 4200,
-        delay: 0.18,
-        delayFeedback: 0.32,
+        delay: 0.06,
+        delayFeedback: 0.12,
       },
       generator: 'houseStabs',
       params: { octave: 4, density: 0.7 },

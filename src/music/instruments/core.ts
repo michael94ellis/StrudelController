@@ -109,9 +109,9 @@ export const coreInstruments = {
     defaultParams: {
       strudelSound: DEFAULT_STRUDEL_SOUND.pluck,
       gain: 0.38,
-      room: 0.35,
-      delay: 0.22,
-      delayFeedback: 0.28,
+      room: 0.28,
+      delay: 0.08,
+      delayFeedback: 0.14,
       cutoff: 2800,
     },
     schema: [

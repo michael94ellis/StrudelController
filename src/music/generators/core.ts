@@ -141,7 +141,7 @@ export const coreGenerators = {
       const roots = ctx.roots.map((r) => r.replace(/\d+$/, String(oct)))
       const rhythm = str(params, 'rhythm', 'quarters')
       if (rhythm === 'half') return notePerBarStruct(roots, 'x ~ x ~')
-      if (rhythm === 'syncopated') return notePerBarStruct(roots, 'x ~ x x ~ x ~ ~')
+      if (rhythm === 'syncopated') return notePerBarStruct(roots, 'x ~ ~ x ~ x ~ ~')
       return notePerBar(roots)
     },
   },
@@ -206,9 +206,9 @@ export const coreGenerators = {
         rhythm === 'whole'
           ? 'x'
           : rhythm === 'quarters'
-            ? 'x x x x'
+            ? '~ x ~ x ~ x ~ x'
             : rhythm === 'syncopated'
-              ? 'x ~ x ~ ~ x ~ ~'
+              ? 'x ~ ~ x ~ x ~ ~'
               : 'x ~ x ~'
       return `note("<${stacks}>").struct("${struct}")`
     },

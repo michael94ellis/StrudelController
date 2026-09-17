@@ -117,12 +117,12 @@ function rhythmStruct(rhythmId: string): string {
     case 'bass:rhythm:half':
       return 'x ~ x ~'
     case 'bass:rhythm:sync':
-      return 'x ~ x x ~ x ~ ~'
+      return 'x ~ ~ x ~ x ~ ~'
     case 'bass:rhythm:trap':
-      return 'x ~ ~ x ~ x x ~'
+      return 'x ~ ~ x ~ x ~ ~'
     case 'bass:rhythm:steady':
     default:
-      return 'x x x x'
+      return 'x ~ x ~ x ~ x ~'
   }
 }
 

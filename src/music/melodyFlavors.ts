@@ -48,7 +48,7 @@ const flavorById = new Map(MELODY_FLAVORS.map((f) => [f.id, f]))
 
 const LEGACY_TO_FLAVORS: Record<string, string[]> = {
   'melody:stabs': ['mel:riff:strum', 'mel:rhythm:medium', 'mel:height:mid'],
-  'melody:houseStabs': ['mel:riff:strum', 'mel:rhythm:busy', 'mel:height:mid'],
+  'melody:houseStabs': ['mel:riff:strum', 'mel:rhythm:offbeat', 'mel:height:mid'],
   'melody:arp': ['mel:riff:arp', 'mel:rhythm:busy', 'mel:height:mid'],
   'melody:phrase': ['mel:riff:lick', 'mel:rhythm:medium', 'mel:height:high'],
   'melody:improv': ['mel:riff:bounce', 'mel:rhythm:busy', 'mel:height:high'],
@@ -77,7 +77,7 @@ export function normalizeMelodyFlavorIds(ids: string[]): string[] {
 export function melodyFlavorsForGenerator(generator: GeneratorName): string[] {
   switch (generator) {
     case 'houseStabs':
-      return normalizeMelodyFlavorIds(['mel:riff:strum', 'mel:rhythm:busy', 'mel:height:mid'])
+      return normalizeMelodyFlavorIds(['mel:riff:strum', 'mel:rhythm:offbeat', 'mel:height:mid'])
     case 'arpUp':
     case 'chiptuneArp':
       return normalizeMelodyFlavorIds(['mel:riff:arp', 'mel:rhythm:busy', 'mel:height:mid'])
@@ -127,7 +127,8 @@ function rhythmStruct(rhythmId: string): string {
     case 'mel:rhythm:slow':
       return 'x ~ ~ ~'
     case 'mel:rhythm:busy':
-      return 'x x x x'
+      // Dense but never adjacent — offbeat 8ths, not gated chops.
+      return '~ x ~ x ~ x ~ x'
     case 'mel:rhythm:offbeat':
       return '~ x ~ x ~ x ~ x'
     case 'mel:rhythm:medium':
@@ -151,7 +152,7 @@ function renderMelodyVoice(
         return `[${notes.join(',')}]`
       })
       .join(' ')
-    return `note("<${stacks}>").struct("${rhythm === 'mel:rhythm:busy' ? 'x ~ x ~' : 'x'}")`
+    return `note("<${stacks}>").struct("${rhythm === 'mel:rhythm:busy' ? '~ x ~ x ~ x ~ x' : 'x'}")`
   }
 
   if (riff === 'mel:riff:strum') {
@@ -223,13 +224,14 @@ function renderMelodyVoice(
     }
     if (rhythm === 'mel:rhythm:busy') {
       return pickBar(ctx.variation, i, [
-        `${a} ${b} ${c} ${a} ${b} ~ ${c} ${a}`,
-        `${a} ${c} ${b} ${up} ${c} ~ ${b} ${a}`,
+        `${a} ~ ${b} ~ ${c} ~ ${a} ~`,
+        `${a} ~ ${c} ~ ${up} ~ ${b} ~`,
+        `~ ${b} ~ ${a} ~ ${c} ~ ${a}`,
       ])
     }
     return pickBar(ctx.variation, i, [
       `${a} ~ ${b} ~ ${c} ~ ${a} ~`,
-      `${a} ${b} ~ ${c} ~ ${up} ~`,
+      `${a} ~ ${c} ~ ${up} ~ ~`,
       `${b} ~ ${a} ~ ${c} ~`,
     ])
   })

@@ -29,6 +29,7 @@ import {
   stopCode,
   updateCode,
 } from '../audio/strudelEngine'
+import { preloadBeatFonts } from '../audio/preloadFonts'
 import { downloadBlob, recordLoopAudio, sanitizeFilename, startLiveRecording, stopLiveRecordingAligned, cancelLiveRecording, isLiveRecording } from '../audio/exportLoop'
 import { planExport, type ExportLength, trimToFullCycles } from '../music/loopDuration'
 
@@ -301,6 +302,7 @@ export const useBeatStore = create<BeatState>((set, get) => {
             'Drum samples did not load. Check your network, then press Play again.',
           )
         }
+        await preloadBeatFonts(beat)
         await playCode(compileBeat(beat), drums)
         set({ playing: isPlaying() })
       } catch (err) {
@@ -320,6 +322,7 @@ export const useBeatStore = create<BeatState>((set, get) => {
         try {
           const beat = get().beat
           await ensureDrumBank(preferredDrumBank(beat))
+          await preloadBeatFonts(beat)
           await updateCode(compileBeat(beat))
           set({ playing: true, error: null })
         } catch (err) {
@@ -340,6 +343,7 @@ export const useBeatStore = create<BeatState>((set, get) => {
         try {
           const beat = get().beat
           await ensureDrumBank(preferredDrumBank(beat))
+          await preloadBeatFonts(beat)
           await updateCode(compileBeat(beat))
           if (getSession() !== startedAt) return
           set({ playing: true, error: null })
@@ -363,6 +367,7 @@ export const useBeatStore = create<BeatState>((set, get) => {
         if (!getDrumPlayback()) {
           throw new Error('Drum samples did not load. Check your network, then try again.')
         }
+        await preloadBeatFonts(beat)
         await playCode(compileBeat(beat), drums)
         set({ playing: isPlaying() })
       }
