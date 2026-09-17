@@ -29,6 +29,8 @@ import {
   stopCode,
   updateCode,
 } from '../audio/strudelEngine'
+import { downloadBlob, recordLoopAudio, sanitizeFilename } from '../audio/exportLoop'
+import { snapExportDuration } from '../music/loopDuration'
 
 type BeatState = {
   beats: Beat[]
@@ -69,6 +71,13 @@ type BeatState = {
   /** Hot-swap when already playing; otherwise start. Avoids hush clicks. */
   audition: () => Promise<void>
   refreshIfPlaying: () => Promise<void>
+  /**
+   * Download a seamless loop near targetSeconds (5/10/15/30).
+   * Duration snaps to whole musical cycles so the file loops cleanly.
+   */
+  exportLoop: (targetSeconds: 5 | 10 | 15 | 30) => Promise<void>
+  exporting: boolean
+  exportLabel: string | null
 }
 
 const loaded = loadLibrary()
@@ -126,6 +135,8 @@ export const useBeatStore = create<BeatState>((set, get) => {
     beat: initialBeat,
     playing: false,
     error: null,
+    exporting: false,
+    exportLabel: null,
 
     selectBeat: (id) => {
       const s = get()
@@ -331,6 +342,43 @@ export const useBeatStore = create<BeatState>((set, get) => {
           set({ error: err instanceof Error ? err.message : String(err) })
         }
       }, 280)
+    },
+
+    exportLoop: async (targetSeconds) => {
+      if (get().exporting) return
+      clearRefreshTimer()
+      const beat = get().beat
+      const snap = snapExportDuration(beat, targetSeconds)
+      const label =
+        Math.abs(snap.seconds - snap.targetSeconds) < 0.05
+          ? `Recording ${snap.targetSeconds}s…`
+          : `Recording ${snap.seconds.toFixed(1)}s (${snap.loops}× loop)…`
+      set({ exporting: true, exportLabel: label, error: null })
+      try {
+        await ensureStrudel()
+        const drums = preferredDrumBank(beat)
+        const loaded = await ensureDrumBank(drums)
+        if (!loaded) await loadDrumKitsUntilReady()
+        if (!getDrumPlayback()) {
+          throw new Error('Drum samples did not load. Check your network, then try again.')
+        }
+        // Restart from cycle 0 so the take lines up with the loop
+        await playCode(compileBeat(beat), drums)
+        set({ playing: isPlaying() })
+
+        const { blob, extension, seconds } = await recordLoopAudio(snap.seconds)
+        const base = sanitizeFilename(beat.name)
+        const secTag = Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(1)
+        downloadBlob(blob, `${base}-${secTag}s.${extension}`)
+        set({ exportLabel: null })
+      } catch (err) {
+        set({
+          error: err instanceof Error ? err.message : String(err),
+          exportLabel: null,
+        })
+      } finally {
+        set({ exporting: false })
+      }
     },
   }
 })

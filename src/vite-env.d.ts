@@ -35,3 +35,11 @@ declare module '@strudel/web' {
 
   export function resetGlobalEffects(): void
 }
+
+declare module 'superdough' {
+  export function getSuperdoughAudioController(): {
+    output: {
+      destinationGain: GainNode | null
+    }
+  }
+}
