@@ -36,6 +36,7 @@ export type PatternStyleOption = {
 export type PatternStyleGroup = {
   id: string
   label: string
+  hint?: string
   /** One active choice per group (radio pills). Default true. */
   exclusive?: boolean
   /** When exclusive, clicking the active pill clears the group. */
@@ -53,6 +54,7 @@ export type ChordDegreeToggle = {
 const DRUM_STYLE_GROUPS: PatternStyleGroup[] = DRUM_FLAVOR_SECTIONS.map((section) => ({
   id: `drum:${section.id}`,
   label: section.label,
+  hint: section.hint,
   exclusive: false,
   options: flavorsInSection(section.id).map((f) => ({
     id: f.id,
@@ -64,6 +66,7 @@ const DRUM_STYLE_GROUPS: PatternStyleGroup[] = DRUM_FLAVOR_SECTIONS.map((section
 const BASS_STYLE_GROUPS: PatternStyleGroup[] = BASS_FLAVOR_SECTIONS.map((section) => ({
   id: `bass:${section.id}`,
   label: section.label,
+  hint: section.hint,
   exclusive: false,
   options: bassFlavorsInSection(section.id).map((f) => ({
     id: f.id,
@@ -75,6 +78,7 @@ const BASS_STYLE_GROUPS: PatternStyleGroup[] = BASS_FLAVOR_SECTIONS.map((section
 const MELODY_STYLE_GROUPS: PatternStyleGroup[] = MELODY_FLAVOR_SECTIONS.map((section) => ({
   id: `mel:${section.id}`,
   label: section.label,
+  hint: section.hint,
   exclusive: false,
   options: melodyFlavorsInSection(section.id).map((f) => ({
     id: f.id,
@@ -106,18 +110,82 @@ export const CHORD_DEGREE_TOGGLES: ChordDegreeToggle[] = [
   { id: 'deg:vi', label: 'vi · mood', short: 'vi', chord: { degree: 'vi', quality: 'm7' } },
 ]
 
-const DEGREE_ORDER = CHORD_DEGREE_TOGGLES.map((t) => t.id)
-
 /** Friendly mood pills for non-musicians (maps to chord craft under the hood). */
-export const CHORD_PRESETS: Array<{ id: string; label: string; degrees: string[]; length: ChordLoopLength }> =
-  [
-    { id: 'preset:pop', label: 'Pop', degrees: ['deg:I', 'deg:vi', 'deg:IV', 'deg:V'], length: 4 },
-    { id: 'preset:anthem', label: 'Anthem', degrees: ['deg:I', 'deg:V', 'deg:vi', 'deg:IV'], length: 4 },
-    { id: 'preset:jazz', label: 'Jazzy', degrees: ['deg:ii', 'deg:V', 'deg:I', 'deg:vi'], length: 4 },
-    { id: 'preset:minor', label: 'Moody', degrees: ['deg:vi', 'deg:IV', 'deg:I', 'deg:V'], length: 4 },
-    { id: 'preset:drone', label: 'Drone', degrees: ['deg:I'], length: 4 },
-    { id: 'preset:long', label: 'Long loop', degrees: ['deg:vi', 'deg:IV', 'deg:I', 'deg:V'], length: 16 },
-  ]
+export type ChordPreset = {
+  id: string
+  /** Legacy display name; UI uses {@link chordPresetPillLabel}. */
+  label: string
+  degrees: string[]
+  length: ChordLoopLength
+}
+
+export const CHORD_PRESETS: ChordPreset[] = [
+  { id: 'preset:pop', label: 'Pop', degrees: ['deg:I', 'deg:vi', 'deg:IV', 'deg:V'], length: 4 },
+  { id: 'preset:anthem', label: 'Anthem', degrees: ['deg:I', 'deg:V', 'deg:vi', 'deg:IV'], length: 4 },
+  { id: 'preset:soft', label: 'Soft', degrees: ['deg:I', 'deg:IV', 'deg:vi', 'deg:V'], length: 4 },
+  { id: 'preset:50s', label: '50s', degrees: ['deg:I', 'deg:vi', 'deg:ii', 'deg:V'], length: 4 },
+  { id: 'preset:lift', label: 'Lift', degrees: ['deg:I', 'deg:IV', 'deg:V', 'deg:IV'], length: 4 },
+  { id: 'preset:jazz', label: 'Jazz turn', degrees: ['deg:ii', 'deg:V', 'deg:I', 'deg:vi'], length: 4 },
+  { id: 'preset:turn', label: 'Turnaround', degrees: ['deg:ii', 'deg:V', 'deg:I'], length: 4 },
+  { id: 'preset:minor', label: 'Minor lift', degrees: ['deg:vi', 'deg:IV', 'deg:I', 'deg:V'], length: 4 },
+  { id: 'preset:vamp', label: 'Two-chord', degrees: ['deg:vi', 'deg:V'], length: 4 },
+  { id: 'preset:canon', label: 'Canon', degrees: ['deg:I', 'deg:V', 'deg:vi', 'deg:iii', 'deg:IV'], length: 8 },
+  { id: 'preset:eight', label: 'Eight bars', degrees: ['deg:I', 'deg:vi', 'deg:IV', 'deg:V'], length: 8 },
+  { id: 'preset:drone', label: 'Drone', degrees: ['deg:I'], length: 4 },
+  { id: 'preset:long', label: 'Long loop', degrees: ['deg:vi', 'deg:IV', 'deg:I', 'deg:V'], length: 16 },
+]
+
+/** Roman numeral + quality, e.g. Imaj7, iim7, V7 */
+export function romanNumeralForChord(spec: ChordSpec): string {
+  const q = spec.quality ?? 'maj7'
+  const d = spec.degree
+  switch (q) {
+    case 'maj7':
+      return `${d}maj7`
+    case 'm7':
+      return `${d}m7`
+    case '7':
+      return `${d}7`
+    case 'maj':
+      return d
+    case 'min':
+      return `${d}m`
+    case 'sus':
+      return `${d}sus`
+    case 'dim':
+      return `${d}dim`
+    default:
+      return d
+  }
+}
+
+function romanLineForDegreeIds(degreeIds: string[]): string {
+  return degreeIds
+    .map((id) => {
+      const t = CHORD_DEGREE_TOGGLES.find((x) => x.id === id)
+      if (!t) throw new Error(`Unknown chord degree id: ${id}`)
+      return romanNumeralForChord(t.chord)
+    })
+    .join(' → ')
+}
+
+/** Progression in Roman numerals (transpose with loop key). */
+export function chordPresetPillLabel(preset: ChordPreset): string {
+  const line = romanLineForDegreeIds(preset.degrees)
+  if (preset.length > preset.degrees.length) {
+    const repeats = preset.length / preset.degrees.length
+    return `${line} · ${repeats}× · ${preset.length} bars`
+  }
+  return line
+}
+
+/** Compact Roman numeral line for summaries (truncates long loops). */
+export function progressionRomanLine(chords: ChordSpec[], opts?: { maxChords?: number }): string {
+  const max = opts?.maxChords ?? chords.length
+  const line = chords.slice(0, max).map(romanNumeralForChord).join(' → ')
+  if (chords.length > max) return `${line} …`
+  return line
+}
 
 const MELODIC_KINDS = new Set<InstrumentKind>([
   'pluck',
@@ -199,8 +267,7 @@ export function buildProgressionFromStyles(
   chordStyleIds: string[],
   chordLength: ChordLoopLength,
 ): Progression {
-  const ordered = DEGREE_ORDER.filter((id) => chordStyleIds.includes(id))
-  const active = ordered.length ? ordered : ['deg:I', 'deg:IV', 'deg:vi', 'deg:V']
+  const active = chordStyleIds.length ? chordStyleIds : ['deg:I', 'deg:IV', 'deg:vi', 'deg:V']
   const base = active.map((id) => {
     const t = CHORD_DEGREE_TOGGLES.find((x) => x.id === id)!
     return t.chord
@@ -212,7 +279,7 @@ export function buildProgressionFromStyles(
       if (chords.length >= chordLength) break
     }
   }
-  const label = active.map((id) => CHORD_DEGREE_TOGGLES.find((t) => t.id === id)!.short).join('–')
+  const label = base.map(romanNumeralForChord).join('–')
   return { id: 'crafted', label: `${label} · ${chordLength}b`, chords }
 }
 
@@ -269,14 +336,11 @@ export function resolvePattern(layer: BeatLayer): { generator: GeneratorName; pa
 
 export function chordCraftSummary(layer: BeatLayer): string {
   const prog = resolveProgression(layer)
-  const mood = CHORD_PRESETS.find(
-    (p) =>
-      p.length === (layer.chordLength ?? 4) &&
-      p.degrees.length === (layer.chordStyleIds?.length ?? 0) &&
-      p.degrees.every((d, i) => layer.chordStyleIds?.[i] === d),
-  )
-  if (mood) return mood.label
-  return `${prog.chords.length}b`
+  const barCount = prog.chords.length
+  const maxChords = barCount > 8 ? 4 : barCount
+  const line = progressionRomanLine(prog.chords, { maxChords })
+  if (barCount > maxChords) return `${line} · ${barCount} bars`
+  return line
 }
 
 export function patternStyleSummary(layer: BeatLayer): string {

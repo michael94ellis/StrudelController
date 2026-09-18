@@ -10,28 +10,58 @@ export type MelodyFlavor = {
   label: string
 }
 
-export const MELODY_FLAVOR_SECTIONS: Array<{ id: MelodyFlavorSection; label: string }> = [
-  { id: 'riff', label: 'Riff' },
-  { id: 'rhythm', label: 'Rhythm' },
-  { id: 'height', label: 'Height' },
+export const MELODY_FLAVOR_SECTIONS: Array<{
+  id: MelodyFlavorSection
+  label: string
+  hint: string
+}> = [
+  {
+    id: 'riff',
+    label: 'Melody',
+    hint: 'Block chords, arpeggios, runs, pads, bells, and single-note hooks.',
+  },
+  {
+    id: 'rhythm',
+    label: 'Rhythm',
+    hint: 'From one hit per bar up to syncopated and double-time.',
+  },
+  {
+    id: 'height',
+    label: 'Range',
+    hint: 'Low, mid, or high register.',
+  },
 ]
 
 /** Shared vibe pills — multi-select within and across sections. */
 export const MELODY_FLAVORS: MelodyFlavor[] = [
-  // Riff
-  { id: 'mel:riff:strum', section: 'riff', label: 'Chord strum' },
-  { id: 'mel:riff:arp', section: 'riff', label: 'Plucky arp' },
-  { id: 'mel:riff:up', section: 'riff', label: 'Step up' },
-  { id: 'mel:riff:down', section: 'riff', label: 'Step down' },
-  { id: 'mel:riff:bounce', section: 'riff', label: 'Bounce' },
-  { id: 'mel:riff:lick', section: 'riff', label: 'Tasty lick' },
-  { id: 'mel:riff:wash', section: 'riff', label: 'Soft wash' },
-  { id: 'mel:riff:chime', section: 'riff', label: 'Chime hits' },
-  // Rhythm
+  // Melody shape (riff)
+  { id: 'mel:riff:strum', section: 'riff', label: 'Block chords' },
+  { id: 'mel:riff:arp', section: 'riff', label: 'Arpeggio' },
+  { id: 'mel:riff:up', section: 'riff', label: 'Rising run' },
+  { id: 'mel:riff:down', section: 'riff', label: 'Falling run' },
+  { id: 'mel:riff:bounce', section: 'riff', label: 'Up & down' },
+  { id: 'mel:riff:lick', section: 'riff', label: 'Lead phrase' },
+  { id: 'mel:riff:wash', section: 'riff', label: 'Sustained pad' },
+  { id: 'mel:riff:chime', section: 'riff', label: 'Bell accents' },
+  { id: 'mel:riff:pedal', section: 'riff', label: 'Root pedal' },
+  { id: 'mel:riff:top', section: 'riff', label: 'Top note' },
+  { id: 'mel:riff:third', section: 'riff', label: 'On the 3rd' },
+  { id: 'mel:riff:dyad', section: 'riff', label: 'Two-note stab' },
+  { id: 'mel:riff:ping', section: 'riff', label: 'Root & fifth' },
+  { id: 'mel:riff:octave', section: 'riff', label: 'Octave jump' },
+  { id: 'mel:riff:cascade', section: 'riff', label: 'High cascade' },
+  { id: 'mel:riff:sway', section: 'riff', label: 'Sway' },
+  { id: 'mel:riff:hook', section: 'riff', label: 'Catchy hook' },
+  // Rhythm (8-step structs unless noted)
+  { id: 'mel:rhythm:whole', section: 'rhythm', label: 'Whole bar' },
   { id: 'mel:rhythm:slow', section: 'rhythm', label: 'Slow' },
+  { id: 'mel:rhythm:halftime', section: 'rhythm', label: 'Half-time' },
   { id: 'mel:rhythm:medium', section: 'rhythm', label: 'Medium' },
-  { id: 'mel:rhythm:busy', section: 'rhythm', label: 'Busy' },
-  { id: 'mel:rhythm:offbeat', section: 'rhythm', label: 'Offbeat' },
+  { id: 'mel:rhythm:steady', section: 'rhythm', label: 'Steady 4ths' },
+  { id: 'mel:rhythm:offbeat', section: 'rhythm', label: 'Offbeat 8ths' },
+  { id: 'mel:rhythm:sync', section: 'rhythm', label: 'Syncopated' },
+  { id: 'mel:rhythm:busy', section: 'rhythm', label: 'Busy 8ths' },
+  { id: 'mel:rhythm:double', section: 'rhythm', label: 'Double-time' },
   // Height
   { id: 'mel:height:low', section: 'height', label: 'Low' },
   { id: 'mel:height:mid', section: 'height', label: 'Mid' },
@@ -122,16 +152,52 @@ function withOct(note: string, oct: number): string {
   return note.replace(/\d+$/, String(oct))
 }
 
+function rhythmDensity(rhythmId: string): 'sparse' | 'medium' | 'dense' {
+  switch (rhythmId) {
+    case 'mel:rhythm:whole':
+    case 'mel:rhythm:slow':
+    case 'mel:rhythm:halftime':
+      return 'sparse'
+    case 'mel:rhythm:busy':
+    case 'mel:rhythm:steady':
+    case 'mel:rhythm:double':
+      return 'dense'
+    default:
+      return 'medium'
+  }
+}
+
+function arpNotesPerBar(rhythmId: string): number {
+  switch (rhythmDensity(rhythmId)) {
+    case 'sparse':
+      return 3
+    case 'dense':
+      return rhythmId === 'mel:rhythm:double' ? 6 : 8
+    default:
+      return 4
+  }
+}
+
 function rhythmStruct(rhythmId: string): string {
   switch (rhythmId) {
+    case 'mel:rhythm:whole':
+      return 'x'
     case 'mel:rhythm:slow':
       return 'x ~ ~ ~'
-    case 'mel:rhythm:busy':
-      // Dense but never adjacent — offbeat 8ths, not gated chops.
-      return '~ x ~ x ~ x ~ x'
+    case 'mel:rhythm:halftime':
+      return 'x ~ ~ ~ ~ ~ x ~'
+    case 'mel:rhythm:medium':
+      return 'x ~ x ~'
+    case 'mel:rhythm:steady':
+      return 'x ~ x ~ x ~ x ~'
     case 'mel:rhythm:offbeat':
       return '~ x ~ x ~ x ~ x'
-    case 'mel:rhythm:medium':
+    case 'mel:rhythm:sync':
+      return 'x ~ ~ x ~ ~ x ~'
+    case 'mel:rhythm:busy':
+      return 'x ~ x ~ ~ x ~ x ~'
+    case 'mel:rhythm:double':
+      return 'x x ~ x x x ~ x'
     default:
       return 'x ~ x ~'
   }
@@ -152,7 +218,9 @@ function renderMelodyVoice(
         return `[${notes.join(',')}]`
       })
       .join(' ')
-    return `note("<${stacks}>").struct("${rhythm === 'mel:rhythm:busy' ? '~ x ~ x ~ x ~ x' : 'x'}")`
+    const washStruct =
+      rhythm === 'mel:rhythm:whole' || rhythmDensity(rhythm) === 'sparse' ? 'x' : struct
+    return `note("<${stacks}>").struct("${washStruct}")`
   }
 
   if (riff === 'mel:riff:strum') {
@@ -166,7 +234,7 @@ function renderMelodyVoice(
   }
 
   if (riff === 'mel:riff:arp') {
-    const notesPerBar = rhythm === 'mel:rhythm:busy' ? 8 : rhythm === 'mel:rhythm:slow' ? 3 : 4
+    const notesPerBar = arpNotesPerBar(rhythm)
     const seq = ctx.triads.map((t) => {
       const notes = t.map((n) => withOct(n, oct))
       const cycle = [...notes, notes[0]]
@@ -209,9 +277,97 @@ function renderMelodyVoice(
   if (riff === 'mel:riff:chime') {
     const hits = ctx.triads.map((t, i) => {
       const n = withOct(t[i % t.length], oct)
-      return rhythm === 'mel:rhythm:busy' ? `${n} ~ ${n} ~` : `~ ${n} ~ ~`
+      const density = rhythmDensity(rhythm)
+      if (density === 'dense') return `${n} ~ ${n} ~ ${n} ~ ${n} ~`
+      if (density === 'sparse') return `~ ~ ${n} ~ ~ ~ ~ ~`
+      if (rhythm === 'mel:rhythm:offbeat') return `~ ${n} ~ ${n} ~ ${n} ~ ${n}`
+      if (rhythm === 'mel:rhythm:sync') return `~ ~ ${n} ~ ${n} ~ ~ ${n}`
+      return `~ ${n} ~ ~ ~ ${n} ~ ~`
     })
     return notePerBar(hits)
+  }
+
+  if (riff === 'mel:riff:pedal') {
+    const roots = ctx.triads.map((t) => withOct(t[0], oct))
+    return notePerBarStruct(roots, struct)
+  }
+
+  if (riff === 'mel:riff:top') {
+    const tops = ctx.triads.map((t) => withOct(t[2], oct))
+    return notePerBarStruct(tops, struct)
+  }
+
+  if (riff === 'mel:riff:third') {
+    const thirds = ctx.triads.map((t) => withOct(t[1], oct))
+    return notePerBarStruct(thirds, struct)
+  }
+
+  if (riff === 'mel:riff:dyad') {
+    const stacks = ctx.triads
+      .map((t) => {
+        const a = withOct(t[0], oct)
+        const b = withOct(t[1], oct)
+        return `[${a},${b}]`
+      })
+      .join(' ')
+    return `note("<${stacks}>").struct("${struct}")`
+  }
+
+  if (riff === 'mel:riff:ping') {
+    const ping = ctx.triads.map((t) => {
+      const r = withOct(t[0], oct)
+      const f = withOct(t[2], oct)
+      return `${r} ${f} ${r} ${f}`
+    })
+    return notePerBarStruct(ping, struct)
+  }
+
+  if (riff === 'mel:riff:octave') {
+    const leap = ctx.triads.map((t) => {
+      const lo = withOct(t[0], oct)
+      const hi = withOct(t[0], oct + 1)
+      return `${lo} ${hi} ${lo} ${hi}`
+    })
+    return notePerBarStruct(leap, struct)
+  }
+
+  if (riff === 'mel:riff:cascade') {
+    const cascade = ctx.triads.map((t) => {
+      const a = withOct(t[0], oct)
+      const b = withOct(t[1], oct)
+      const c = withOct(t[2], oct)
+      const hi = withOct(t[2], oct + 1)
+      return `${hi} ${c} ${b} ${a}`
+    })
+    return notePerBarStruct(cascade, struct)
+  }
+
+  if (riff === 'mel:riff:sway') {
+    const sway = ctx.triads.map((t) => {
+      const a = withOct(t[0], oct)
+      const b = withOct(t[1], oct)
+      return `${b} ${a} ${b} ${a}`
+    })
+    return notePerBarStruct(sway, struct)
+  }
+
+  if (riff === 'mel:riff:hook') {
+    const hook = ctx.triads.map((t, i) => {
+      const a = withOct(t[0], oct)
+      const b = withOct(t[1], oct)
+      const c = withOct(t[2], oct)
+      return pickBar(ctx.variation, i, [
+        `${c} ${b} ${a} ${b}`,
+        `${b} ${c} ${b} ${a}`,
+        `${a} ${b} ${c} ${a}`,
+      ])
+    })
+    return notePerBarStruct(hook, struct)
+  }
+
+  if (riff !== 'mel:riff:lick') {
+    const roots = ctx.triads.map((t) => withOct(t[0], oct))
+    return notePerBarStruct(roots, struct)
   }
 
   const lick = ctx.triads.map((t, i) => {
@@ -219,14 +375,29 @@ function renderMelodyVoice(
     const b = withOct(t[1], oct)
     const c = withOct(t[2], oct)
     const up = withOct(t[0], oct + 1)
-    if (rhythm === 'mel:rhythm:slow') {
+    const density = rhythmDensity(rhythm)
+    if (density === 'sparse') {
       return pickBar(ctx.variation, i, [`${a} ~ ~ ${b}`, `${a} ~ ${c} ~`, `~ ${b} ~ ${a}`])
     }
-    if (rhythm === 'mel:rhythm:busy') {
+    if (density === 'dense') {
       return pickBar(ctx.variation, i, [
         `${a} ~ ${b} ~ ${c} ~ ${a} ~`,
         `${a} ~ ${c} ~ ${up} ~ ${b} ~`,
         `~ ${b} ~ ${a} ~ ${c} ~ ${a}`,
+      ])
+    }
+    if (rhythm === 'mel:rhythm:sync') {
+      return pickBar(ctx.variation, i, [
+        `${a} ~ ~ ${c} ~ ${b} ~ ${a}`,
+        `~ ${b} ~ ~ ${a} ~ ${c}`,
+        `${a} ~ ${b} ~ ~ ${a} ~ ${c}`,
+      ])
+    }
+    if (rhythm === 'mel:rhythm:offbeat') {
+      return pickBar(ctx.variation, i, [
+        `~ ${a} ~ ${b} ~ ${c} ~ ${a}`,
+        `~ ${b} ~ ${a} ~ ${c} ~ ${b}`,
+        `~ ${a} ~ ${c} ~ ${b} ~ ${a}`,
       ])
     }
     return pickBar(ctx.variation, i, [

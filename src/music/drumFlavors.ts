@@ -11,38 +11,42 @@ export type DrumFlavor = {
   lane: string
 }
 
-export const DRUM_FLAVOR_SECTIONS: Array<{ id: DrumFlavorSection; label: string }> = [
-  { id: 'kick', label: 'Kick' },
-  { id: 'snare', label: 'Snare' },
-  { id: 'hats', label: 'Hats' },
-  { id: 'rim', label: 'Rim' },
+export const DRUM_FLAVOR_SECTIONS: Array<{ id: DrumFlavorSection; label: string; hint: string }> = [
+  { id: 'kick', label: 'Kick', hint: 'Low-end pulse — stack several patterns.' },
+  { id: 'snare', label: 'Snare', hint: 'Backbeats, claps, ghosts, and builds.' },
+  { id: 'hats', label: 'Hi-hats', hint: 'Straight, fast, open, offbeat, or sparse.' },
+  { id: 'rim', label: 'Perc', hint: 'Rim, shaker, and extra groove on top.' },
 ]
 
 /** Stackable beat particles — any mix within and across sections. */
 export const DRUM_FLAVORS: DrumFlavor[] = [
   // Kick
-  { id: 'flavor:kick4', section: 'kick', label: 'Four', lane: 'bd*4' },
-  { id: 'flavor:kick2', section: 'kick', label: 'Two', lane: 'bd ~ ~ ~ bd ~ ~ ~' },
-  { id: 'flavor:kickSync', section: 'kick', label: 'Sync', lane: 'bd ~ ~ bd ~ bd ~ ~' },
-  { id: 'flavor:kickTrap', section: 'kick', label: 'Trap', lane: 'bd ~ ~ ~ ~ ~ bd ~' },
-  { id: 'flavor:kickFourAnd', section: 'kick', label: '1 & 3', lane: 'bd ~ bd ~ bd ~ bd ~' },
+  { id: 'flavor:kick4', section: 'kick', label: 'Four on the floor', lane: 'bd*4' },
+  { id: 'flavor:kick2', section: 'kick', label: 'Two per bar', lane: 'bd ~ ~ ~ bd ~ ~ ~' },
+  { id: 'flavor:kickOne', section: 'kick', label: 'On beat 1 only', lane: 'bd ~ ~ ~ ~ ~ ~ ~' },
+  { id: 'flavor:kickSync', section: 'kick', label: 'Syncopated kick', lane: 'bd ~ ~ bd ~ bd ~ ~' },
+  { id: 'flavor:kickTrap', section: 'kick', label: 'Trap kick', lane: 'bd ~ ~ ~ ~ ~ bd ~' },
+  { id: 'flavor:kickFourAnd', section: 'kick', label: 'Beats 1 & 3', lane: 'bd ~ bd ~ bd ~ bd ~' },
   // Snare
-  { id: 'flavor:snareBack', section: 'snare', label: '2 / 4', lane: '~ sd ~ sd' },
-  { id: 'flavor:snareHalf', section: 'snare', label: 'Half', lane: '~ ~ ~ ~ sd ~ ~ ~' },
-  { id: 'flavor:clap', section: 'snare', label: 'Clap', lane: '~ cp ~ cp' },
-  { id: 'flavor:snareGhost', section: 'snare', label: 'Ghost', lane: '~ sd ~ [sd ~] ~ sd ~ sd' },
-  { id: 'flavor:snareBuild', section: 'snare', label: 'Build', lane: '~ ~ ~ ~ ~ sd sd sd' },
+  { id: 'flavor:snareBack', section: 'snare', label: 'Backbeat 2 & 4', lane: '~ sd ~ sd' },
+  { id: 'flavor:snareHalf', section: 'snare', label: 'Half-time hit', lane: '~ ~ ~ ~ sd ~ ~ ~' },
+  { id: 'flavor:clap', section: 'snare', label: 'Clap 2 & 4', lane: '~ cp ~ cp' },
+  { id: 'flavor:snareGhost', section: 'snare', label: 'Ghost notes', lane: '~ sd ~ [sd ~] ~ sd ~ sd' },
+  { id: 'flavor:snareBuild', section: 'snare', label: 'Build-up roll', lane: '~ ~ ~ ~ ~ sd sd sd' },
+  { id: 'flavor:snareFill', section: 'snare', label: 'Bar-end fill', lane: '~ ~ ~ ~ ~ ~ sd sd' },
   // Hats
-  { id: 'flavor:hat8', section: 'hats', label: '8ths', lane: 'hh ~ hh ~ hh ~ hh ~' },
-  { id: 'flavor:hat16', section: 'hats', label: '16ths', lane: 'hh*16' },
-  { id: 'flavor:hatOpen', section: 'hats', label: 'Open', lane: 'hh ~ oh ~ hh ~ oh ~' },
-  { id: 'flavor:hatOff', section: 'hats', label: 'Offbeat', lane: '~ hh ~ hh ~ hh ~ hh' },
-  { id: 'flavor:hatSparse', section: 'hats', label: 'Sparse', lane: 'hh ~ ~ ~ hh ~ ~ ~' },
-  // Rim / spice
-  { id: 'flavor:rim', section: 'rim', label: 'Click', lane: 'rim ~ ~ rim ~ ~ rim ~' },
-  { id: 'flavor:rimDense', section: 'rim', label: 'Dense', lane: 'rim ~ rim rim ~ rim ~ rim' },
-  { id: 'flavor:shaker', section: 'rim', label: 'Shaker', lane: 'sh*8' },
-  { id: 'flavor:shakerOff', section: 'rim', label: 'Shake off', lane: '~ sh ~ sh ~ sh ~ sh' },
+  { id: 'flavor:hat8', section: 'hats', label: 'Straight 8ths', lane: 'hh ~ hh ~ hh ~ hh ~' },
+  { id: 'flavor:hat16', section: 'hats', label: 'Running 16ths', lane: 'hh*16' },
+  { id: 'flavor:hatOpen', section: 'hats', label: 'Open & closed', lane: 'hh ~ oh ~ hh ~ oh ~' },
+  { id: 'flavor:hatOff', section: 'hats', label: 'Offbeat hats', lane: '~ hh ~ hh ~ hh ~ hh' },
+  { id: 'flavor:hatSparse', section: 'hats', label: 'Sparse hats', lane: 'hh ~ ~ ~ hh ~ ~ ~' },
+  { id: 'flavor:hatPedal', section: 'hats', label: 'Pedal hat', lane: 'hh*8' },
+  // Perc
+  { id: 'flavor:rim', section: 'rim', label: 'Rim clicks', lane: 'rim ~ ~ rim ~ ~ rim ~' },
+  { id: 'flavor:rimDense', section: 'rim', label: 'Busy rim', lane: 'rim ~ rim rim ~ rim ~ rim' },
+  { id: 'flavor:shaker', section: 'rim', label: 'Steady shaker', lane: 'sh*8' },
+  { id: 'flavor:shakerOff', section: 'rim', label: 'Offbeat shaker', lane: '~ sh ~ sh ~ sh ~ sh' },
+  { id: 'flavor:tamb', section: 'rim', label: 'Cowbell accents', lane: '~ ~ cb ~ ~ ~ cb ~' },
 ]
 
 export const DEFAULT_DRUM_FLAVOR_IDS = [

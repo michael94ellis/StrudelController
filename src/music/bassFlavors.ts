@@ -9,28 +9,50 @@ export type BassFlavor = {
   label: string
 }
 
-export const BASS_FLAVOR_SECTIONS: Array<{ id: BassFlavorSection; label: string }> = [
-  { id: 'riff', label: 'Riff' },
-  { id: 'rhythm', label: 'Rhythm' },
-  { id: 'height', label: 'Height' },
+export const BASS_FLAVOR_SECTIONS: Array<{
+  id: BassFlavorSection
+  label: string
+  hint: string
+}> = [
+  {
+    id: 'riff',
+    label: 'Line',
+    hint: 'Roots, walks, runs, fills, and octave moves — stack any mix.',
+  },
+  {
+    id: 'rhythm',
+    label: 'Rhythm',
+    hint: 'Quarters, pump, half-time, trap, and syncopated grooves.',
+  },
+  {
+    id: 'height',
+    label: 'Range',
+    hint: 'Low, mid, or high register.',
+  },
 ]
 
 /** Plain-language bass vibe pills — multi-select within and across sections. */
 export const BASS_FLAVORS: BassFlavor[] = [
-  // Riff
-  { id: 'bass:riff:hold', section: 'riff', label: '1-note hold' },
-  { id: 'bass:riff:pulse', section: 'riff', label: 'Pulse roots' },
-  { id: 'bass:riff:walk', section: 'riff', label: 'Walk around' },
-  { id: 'bass:riff:up', section: 'riff', label: 'Step up' },
-  { id: 'bass:riff:down', section: 'riff', label: 'Step down' },
-  { id: 'bass:riff:bounce', section: 'riff', label: 'Bounce both ways' },
-  { id: 'bass:riff:lick', section: 'riff', label: 'Tasty lick' },
+  // Line
+  { id: 'bass:riff:hold', section: 'riff', label: 'Sustained root' },
+  { id: 'bass:riff:pulse', section: 'riff', label: 'Repeated roots' },
+  { id: 'bass:riff:walk', section: 'riff', label: 'Root & fifth walk' },
+  { id: 'bass:riff:up', section: 'riff', label: 'Rising run' },
+  { id: 'bass:riff:down', section: 'riff', label: 'Falling run' },
+  { id: 'bass:riff:bounce', section: 'riff', label: 'Up & down' },
+  { id: 'bass:riff:lick', section: 'riff', label: 'Fill phrase' },
+  { id: 'bass:riff:fifth', section: 'riff', label: 'On the fifth' },
+  { id: 'bass:riff:ping', section: 'riff', label: 'Root & fifth' },
+  { id: 'bass:riff:octave', section: 'riff', label: 'Octave jump' },
+  { id: 'bass:riff:hook', section: 'riff', label: 'Simple hook' },
   // Rhythm
-  { id: 'bass:rhythm:steady', section: 'rhythm', label: 'Steady' },
-  { id: 'bass:rhythm:pump', section: 'rhythm', label: 'Pump' },
-  { id: 'bass:rhythm:trap', section: 'rhythm', label: 'Trap bounce' },
+  { id: 'bass:rhythm:whole', section: 'rhythm', label: 'Whole bar' },
+  { id: 'bass:rhythm:steady', section: 'rhythm', label: 'Every beat' },
   { id: 'bass:rhythm:half', section: 'rhythm', label: 'Half-time' },
+  { id: 'bass:rhythm:pump', section: 'rhythm', label: 'Offbeat pump' },
+  { id: 'bass:rhythm:offbeat', section: 'rhythm', label: 'Offbeat 8ths' },
   { id: 'bass:rhythm:sync', section: 'rhythm', label: 'Syncopated' },
+  { id: 'bass:rhythm:trap', section: 'rhythm', label: 'Trap skips' },
   // Height
   { id: 'bass:height:low', section: 'height', label: 'Low' },
   { id: 'bass:height:mid', section: 'height', label: 'Mid' },
@@ -112,7 +134,10 @@ function withOct(note: string, oct: number): string {
 
 function rhythmStruct(rhythmId: string): string {
   switch (rhythmId) {
+    case 'bass:rhythm:whole':
+      return 'x'
     case 'bass:rhythm:pump':
+    case 'bass:rhythm:offbeat':
       return '~ x ~ x ~ x ~ x'
     case 'bass:rhythm:half':
       return 'x ~ x ~'
@@ -136,7 +161,9 @@ function renderBassVoice(
   const roots = ctx.roots.map((r) => withOct(r, oct))
 
   if (riff === 'bass:riff:hold') {
-    return notePerBarStruct(roots, rhythm === 'bass:rhythm:steady' ? 'x' : struct)
+    const holdStruct =
+      rhythm === 'bass:rhythm:whole' || rhythm === 'bass:rhythm:steady' ? 'x' : struct
+    return notePerBarStruct(roots, holdStruct)
   }
 
   if (riff === 'bass:riff:pulse') {
@@ -188,6 +215,43 @@ function renderBassVoice(
       return `${a} ${b} ${c} ${b}`
     })
     return notePerBarStruct(bounce, struct)
+  }
+
+  if (riff === 'bass:riff:fifth') {
+    const fifths = ctx.triads.map((t) => withOct(t[2], oct))
+    return notePerBarStruct(fifths, struct)
+  }
+
+  if (riff === 'bass:riff:ping') {
+    const ping = ctx.triads.map((t) => {
+      const r = withOct(t[0], oct)
+      const f = withOct(t[2], oct)
+      return `${r} ${f} ${r} ${f}`
+    })
+    return notePerBarStruct(ping, struct)
+  }
+
+  if (riff === 'bass:riff:octave') {
+    const leap = ctx.triads.map((t) => {
+      const lo = withOct(t[0], oct)
+      const hi = withOct(t[0], oct + 1)
+      return `${lo} ${hi} ${lo} ${hi}`
+    })
+    return notePerBarStruct(leap, struct)
+  }
+
+  if (riff === 'bass:riff:hook') {
+    const hook = ctx.triads.map((t) => {
+      const a = withOct(t[0], oct)
+      const b = withOct(t[1], oct)
+      const c = withOct(t[2], oct)
+      return `${c} ${b} ${a} ${b}`
+    })
+    return notePerBarStruct(hook, struct)
+  }
+
+  if (riff !== 'bass:riff:lick') {
+    return notePerBarStruct(roots, struct)
   }
 
   const lick = ctx.triads.map((t) => {

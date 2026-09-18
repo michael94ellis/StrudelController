@@ -14,6 +14,8 @@ type Props = {
   exclusive?: boolean
   /** When exclusive, clicking the active pill turns it off. */
   allowOff?: boolean
+  /** When true, pills wrap long labels (e.g. chord progressions). */
+  pillWrap?: boolean
   onChange: (nextActiveIds: string[], toggledId: string, on: boolean) => void
 }
 
@@ -24,13 +26,14 @@ export function StylePills({
   activeIds,
   exclusive = false,
   allowOff = false,
+  pillWrap = false,
   onChange,
 }: Props) {
   return (
     <div className="space-y-2">
       <div>
-        <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{label}</span>
-        {hint ? <p className="mt-0.5 text-xs text-muted">{hint}</p> : null}
+        <p className="text-sm font-medium leading-snug text-ink-soft">{label}</p>
+        {hint ? <p className="mt-0.5 text-xs leading-relaxed text-muted">{hint}</p> : null}
       </div>
       <div className="flex flex-wrap gap-1.5">
         {options.map((opt) => {
@@ -55,7 +58,10 @@ export function StylePills({
                 onChange(next, opt.id, !on)
               }}
               className={cn(
-                'rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                'border px-3 py-1.5 text-xs font-medium transition',
+                pillWrap
+                  ? 'max-w-full rounded-xl text-left leading-snug whitespace-normal'
+                  : 'rounded-full',
                 on
                   ? 'border-amber bg-amber/15 text-ink'
                   : 'border-wood/20 bg-cream/60 text-ink-soft hover:border-wood/35',

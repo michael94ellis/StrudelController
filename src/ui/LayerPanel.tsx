@@ -1,21 +1,11 @@
 import type { BeatLayer } from '../music/types'
 import { layerInstrumentSchema } from '../music/sampleLayers'
-import { CHORD_PRESETS, isMelodicKind, patternGroupsForKind } from '../music/layerStyles'
+import { CHORD_PRESETS, chordPresetPillLabel, isMelodicKind, patternGroupsForKind } from '../music/layerStyles'
 import { useBeatStore } from '../store/beatStore'
 import { SchemaForm } from './controls/SchemaForm'
 import { StylePills } from './controls/StylePills'
 
 type Props = { layer: BeatLayer }
-
-function vibeTitle(layer: BeatLayer): string {
-  if (layer.kind === 'drumkit') return 'Beat flavors'
-  if (layer.kind === 'subBass') return 'Bass vibes'
-  return 'Riff vibes'
-}
-
-function vibeHint(_layer: BeatLayer): string {
-  return 'Stack any mix; multiple per section is fine.'
-}
 
 export function LayerPanel({ layer }: Props) {
   const toggleLayerPatternStyle = useBeatStore((s) => s.toggleLayerPatternStyle)
@@ -49,14 +39,11 @@ export function LayerPanel({ layer }: Props) {
   return (
     <div className="space-y-5 border-t border-wood/10 px-4 py-4">
       <div className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{vibeTitle(layer)}</p>
-          <p className="mt-0.5 text-xs text-muted">{vibeHint(layer)}</p>
-        </div>
         {patternGroups.map((group) => (
           <StylePills
             key={group.id}
             label={group.label}
+            hint={group.hint}
             options={group.options.map((o) => ({ id: o.id, label: o.label }))}
             activeIds={patternActive}
             exclusive={group.exclusive !== false}
@@ -68,9 +55,13 @@ export function LayerPanel({ layer }: Props) {
 
       {showMood ? (
         <StylePills
-          label="Mood"
-          hint="Changes the chords under this track."
-          options={CHORD_PRESETS.map((p) => ({ id: p.id, label: p.label }))}
+          label="Chords that play under this layer"
+          hint="Roman numerals — actual chords follow the loop key."
+          pillWrap
+          options={CHORD_PRESETS.map((p) => ({
+            id: p.id,
+            label: chordPresetPillLabel(p),
+          }))}
           activeIds={activeMoodId ? [activeMoodId] : []}
           exclusive
           onChange={(_next, id) => applyLayerChordPreset(layer.id, id)}
