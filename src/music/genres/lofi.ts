@@ -18,7 +18,8 @@ export const lofi: GenreModule = {
   key: 'Bb',
   scale: 'major',
   swing: SWUNG,
-  defaultProgressionId: 'anthem',
+  defaultProgressionId: 'soft',
+  defaultChordPresetId: 'preset:soft',
 
   generators: {
     /** Lo-fi / dusty boom-bap pocket */
@@ -69,8 +70,13 @@ export const lofi: GenreModule = {
       name: 'Drums',
       kind: 'drumkit',
       instrumentParams: { bank: 'AkaiLinn', gain: 0.42, crunch: 0.18 },
-      generator: 'lofiKit',
-      params: { energy: 0.55 },
+      generator: 'drumCompose',
+      patternStyleIds: [
+        'flavor:kick2',
+        'flavor:snareBack',
+        'flavor:hatSparse',
+        'flavor:shakerOff',
+      ],
     },
     {
       name: 'Bass',
@@ -82,15 +88,15 @@ export const lofi: GenreModule = {
         gain: 0.32,
         release: 0.35,
       },
-      generator: 'walkingBass',
-      params: { octave: 2 },
+      generator: 'bassCompose',
+      patternStyleIds: ['bass:riff:walk', 'bass:rhythm:half', 'bass:height:low'],
     },
     {
       name: 'Keys',
       kind: 'piano',
       instrumentParams: { strudelSound: 'gm_epiano1', gain: 0.38, room: 0.6, delay: 0.22 },
-      generator: 'lofiKeys',
-      params: { octave: 3 },
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:wash', 'mel:rhythm:slow', 'mel:height:mid'],
     },
     {
       name: 'Dust',
@@ -103,7 +109,8 @@ export const lofi: GenreModule = {
         cutoff: 600,
         shimmer: true,
       },
-      generator: 'ambientGrain',
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:chime', 'mel:rhythm:slow', 'mel:height:high'],
     },
   ],
 }

@@ -1,4 +1,4 @@
-import type { Beat, BeatLayer, GeneratorName, InstrumentKind } from '../types'
+import type { Beat, BeatLayer, GeneratorName, InstrumentKind, ParamMap } from '../types'
 import { newId } from '../types'
 import { DEFAULT_PROGRESSION_ID } from '../theory'
 import { generatorDefs } from '../generators/registry'
@@ -7,14 +7,36 @@ import { withStrudelDefaults } from '../strudelSounds'
 import { GENRES, getGenre } from '../genres'
 import type { GenreLayer, GenreModule } from '../genres'
 import {
+  chordCraftFromPreset,
   isMelodicKind,
   patternStyleIdsForLayer,
   progressionToChordStyles,
 } from '../layerStyles'
 
-function layerFrom(spec: GenreLayer, beatProgressionId: string): BeatLayer {
+function layerFrom(
+  spec: GenreLayer,
+  beatProgressionId: string,
+  genreDefaultChordPresetId?: string,
+): BeatLayer {
   const progressionId = spec.progressionId ?? beatProgressionId
-  const chord = progressionToChordStyles(progressionId)
+  const chord = spec.chordPresetId
+    ? chordCraftFromPreset(spec.chordPresetId)
+    : genreDefaultChordPresetId
+      ? chordCraftFromPreset(genreDefaultChordPresetId)
+      : progressionToChordStyles(progressionId)
+  const patternStyleIds =
+    spec.patternStyleIds ?? patternStyleIdsForLayer(spec.generator, spec.kind)
+  const params: ParamMap = {
+    ...generatorDefs[spec.generator].defaultParams,
+    ...spec.params,
+  }
+  if (
+    spec.generator === 'drumCompose' ||
+    spec.generator === 'bassCompose' ||
+    spec.generator === 'melodyCompose'
+  ) {
+    params.flavorIds = patternStyleIds.join(',')
+  }
   return {
     id: newId('layer'),
     name: spec.name,
@@ -25,9 +47,9 @@ function layerFrom(spec: GenreLayer, beatProgressionId: string): BeatLayer {
       ...spec.instrumentParams,
     }),
     generator: spec.generator,
-    params: { ...generatorDefs[spec.generator].defaultParams, ...spec.params },
+    params,
     progressionId,
-    patternStyleIds: patternStyleIdsForLayer(spec.generator, spec.kind),
+    patternStyleIds,
     chordStyleIds: chord.chordStyleIds,
     chordLength: chord.chordLength,
   }
@@ -56,7 +78,9 @@ export function defaultLayer(kind: InstrumentKind): BeatLayer {
 /** The layer stack a genre starts from, with fresh ids. */
 export function layersForGenre(genreId: string): BeatLayer[] {
   const genre = getGenre(genreId) ?? GENRES[0]
-  return genre.layers.map((l) => layerFrom(l, genre.defaultProgressionId))
+  return genre.layers.map((l) =>
+    layerFrom(l, genre.defaultProgressionId, genre.defaultChordPresetId),
+  )
 }
 
 export function createBeat(genreId?: string, name?: string): Beat {
@@ -84,7 +108,9 @@ export function applyGenre(beat: Beat, genreId: string): Beat {
     key: genre.key,
     scale: genre.scale,
     variation: 0,
-    layers: genre.layers.map((l) => layerFrom(l, genre.defaultProgressionId)),
+    layers: genre.layers.map((l) =>
+      layerFrom(l, genre.defaultProgressionId, genre.defaultChordPresetId),
+    ),
   }
 }
 

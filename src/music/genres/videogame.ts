@@ -20,6 +20,7 @@ export const videogame: GenreModule = {
   scale: 'major',
   swing: SWUNG,
   defaultProgressionId: 'anthem',
+  defaultChordPresetId: 'preset:anthem',
 
   generators: {
     /** Bright adventure / RPG town drums */
@@ -63,8 +64,8 @@ export const videogame: GenreModule = {
       name: 'Drums',
       kind: 'drumkit',
       instrumentParams: { bank: 'RolandTR909', gain: 0.48, crunch: 0 },
-      generator: 'chiptuneKit',
-      params: { energy: 0.55 },
+      generator: 'drumCompose',
+      patternStyleIds: ['flavor:kick2', 'flavor:snareHalf', 'flavor:hat8'],
     },
     {
       name: 'Bass',
@@ -77,8 +78,8 @@ export const videogame: GenreModule = {
         attack: 0.01,
         release: 0.15,
       },
-      generator: 'rootBass',
-      params: { rhythm: 'quarters', octave: 2 },
+      generator: 'bassCompose',
+      patternStyleIds: ['bass:riff:pulse', 'bass:rhythm:steady', 'bass:height:mid'],
     },
     {
       name: 'Arp',
@@ -90,8 +91,8 @@ export const videogame: GenreModule = {
         delay: 0.2,
         cutoff: 3000,
       },
-      generator: 'chiptuneArp',
-      params: { octave: 4 },
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:arp', 'mel:rhythm:steady', 'mel:height:mid'],
     },
     {
       name: 'Melody',
@@ -104,14 +105,15 @@ export const videogame: GenreModule = {
         room: 0.3,
         delay: 0.18,
       },
-      generator: 'melodyPhrase',
-      params: { density: 0.55, octave: 5 },
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:chime', 'mel:rhythm:medium', 'mel:height:high'],
     },
     {
       name: 'Air',
       kind: 'texture',
       instrumentParams: { strudelSound: 'pink', mode: 'wind', gain: 0.08, room: 0.8, cutoff: 450 },
-      generator: 'ambientGrain',
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:wash', 'mel:rhythm:slow', 'mel:height:mid'],
     },
   ],
 }

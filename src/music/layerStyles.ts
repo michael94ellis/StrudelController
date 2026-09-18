@@ -263,6 +263,15 @@ export function defaultChordCraft(): { chordStyleIds: string[]; chordLength: Cho
   return progressionToChordStyles(DEFAULT_PROGRESSION_ID)
 }
 
+export function chordCraftFromPreset(presetId: string): {
+  chordStyleIds: string[]
+  chordLength: ChordLoopLength
+} {
+  const preset = CHORD_PRESETS.find((p) => p.id === presetId)
+  if (!preset) return defaultChordCraft()
+  return { chordStyleIds: [...preset.degrees], chordLength: preset.length }
+}
+
 export function buildProgressionFromStyles(
   chordStyleIds: string[],
   chordLength: ChordLoopLength,

@@ -11,6 +11,10 @@ export type GenreLayer = {
   generator: GeneratorName
   /** Pattern params for the generator */
   params?: ParamMap
+  /** Flavor pill ids (compose generators). Overrides generator defaults. */
+  patternStyleIds?: string[]
+  /** Roman-numeral chord preset for this layer (`preset:*` from CHORD_PRESETS). */
+  chordPresetId?: string
   /** Override default chord pattern for this layer */
   progressionId?: string
 }
@@ -36,8 +40,10 @@ export type GenreModule = {
   key: string
   scale: string
   swing: SwingModel
-  /** Id from `PROGRESSIONS` in `../theory` */
+  /** Id from `PROGRESSIONS` in `../theory` (fallback when layers omit `chordPresetId`). */
   defaultProgressionId: string
+  /** Default `preset:*` applied to layers that omit `chordPresetId`. */
+  defaultChordPresetId?: string
   /** Generators only this genre needs (names registered via declaration merging in the module). */
   generators: GeneratorTable
   /** Instrument kinds only this genre needs. */

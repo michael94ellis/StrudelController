@@ -26,6 +26,7 @@ export const house: GenreModule = {
   scale: 'minor',
   swing: SWUNG,
   defaultProgressionId: 'anthem',
+  defaultChordPresetId: 'preset:anthem',
 
   generators: {
     /** Club kit: 4-on-floor kick, clap on 2/4, straight 8th hats (no ghost kicks / offbeat lanes). */
@@ -109,8 +110,8 @@ export const house: GenreModule = {
       name: 'Drums',
       kind: 'drumkit',
       instrumentParams: { bank: 'RolandTR909', gain: 0.88, crunch: 0.04 },
-      generator: 'houseKit',
-      params: { energy: 0.85 },
+      generator: 'drumCompose',
+      patternStyleIds: ['flavor:kick4', 'flavor:clap', 'flavor:hatPedal'],
     },
     {
       name: 'Bass',
@@ -123,15 +124,15 @@ export const house: GenreModule = {
         attack: 0.002,
         release: 0.08,
       },
-      generator: 'houseBass',
-      params: { octave: 2 },
+      generator: 'bassCompose',
+      patternStyleIds: ['bass:riff:pulse', 'bass:rhythm:pump', 'bass:height:mid'],
     },
     {
       name: 'Pad',
       kind: 'pad',
       instrumentParams: { strudelSound: 'gm_pad_warm', gain: 0.16, room: 0.65, cutoff: 1400 },
-      generator: 'chordStabs',
-      params: { voicing: 'triad', rhythm: 'whole' },
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:wash', 'mel:rhythm:whole', 'mel:height:mid'],
     },
     {
       name: 'Stabs',
@@ -144,8 +145,8 @@ export const house: GenreModule = {
         delay: 0.06,
         delayFeedback: 0.12,
       },
-      generator: 'houseStabs',
-      params: { octave: 4, density: 0.7 },
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:dyad', 'mel:rhythm:offbeat', 'mel:height:mid'],
     },
     {
       name: 'Hook',
@@ -158,8 +159,8 @@ export const house: GenreModule = {
         delay: 0.28,
         room: 0.25,
       },
-      generator: 'arpUp',
-      params: { speed: 16, octave: 5 },
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:arp', 'mel:rhythm:steady', 'mel:height:high'],
     },
   ],
 }

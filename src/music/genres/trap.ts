@@ -21,6 +21,7 @@ export const trap: GenreModule = {
   scale: 'minor',
   swing: SWUNG,
   defaultProgressionId: 'anthem',
+  defaultChordPresetId: 'preset:minor',
 
   generators: {
     /** Trap: half-time snare, syncopated 808 kicks, rolling 16th hats */
@@ -79,8 +80,8 @@ export const trap: GenreModule = {
       name: 'Drums',
       kind: 'drumkit',
       instrumentParams: { bank: 'RolandTR808', gain: 0.74, crunch: 0.08 },
-      generator: 'trapKit',
-      params: { energy: 0.8 },
+      generator: 'drumCompose',
+      patternStyleIds: ['flavor:kickTrap', 'flavor:snareHalf', 'flavor:hat16'],
     },
     {
       name: '808',
@@ -93,15 +94,15 @@ export const trap: GenreModule = {
         attack: 0.01,
         release: 0.55,
       },
-      generator: 'trapBass',
-      params: { octave: 1 },
+      generator: 'bassCompose',
+      patternStyleIds: ['bass:riff:lick', 'bass:rhythm:trap', 'bass:height:low'],
     },
     {
       name: 'Pad',
       kind: 'pad',
       instrumentParams: { strudelSound: 'gm_pad_halo', gain: 0.18, room: 0.75, cutoff: 900 },
-      generator: 'chordStabs',
-      params: { voicing: 'triad', rhythm: 'whole' },
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:wash', 'mel:rhythm:whole', 'mel:height:mid'],
     },
     {
       name: 'Hook',
@@ -113,8 +114,8 @@ export const trap: GenreModule = {
         cutoff: 1800,
         delay: 0.3,
       },
-      generator: 'melodyPhrase',
-      params: { density: 0.3, octave: 5 },
+      generator: 'melodyCompose',
+      patternStyleIds: ['mel:riff:lick', 'mel:rhythm:slow', 'mel:height:high'],
     },
   ],
 }

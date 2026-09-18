@@ -5,8 +5,21 @@ import { house } from './house'
 import { videogame } from './videogame'
 import { trap } from './trap'
 import { lofi } from './lofi'
+import { pop } from './pop'
+import { breakbeat } from './breakbeat'
+import { funk } from './funk'
+import { ambient } from './ambient'
 /** Register a genre here to make it selectable and contribute generators/instruments. */
-export const GENRES: GenreModule[] = [house, videogame, trap, lofi]
+export const GENRES: GenreModule[] = [
+  house,
+  pop,
+  trap,
+  breakbeat,
+  lofi,
+  funk,
+  videogame,
+  ambient,
+]
 
 const byId = new Map<string, GenreModule>()
 for (const g of GENRES) {
