@@ -31,10 +31,10 @@ export const SCALES = {
     strudel: 'minor',
     steps: [0, 2, 3, 5, 7, 8, 10],
     chords: [
-      { i: 0, q: 'm9' },
-      { i: 3, q: 'm7' },
-      { i: 5, q: 'maj7' },
-      { i: 2, q: 'maj7' },
+      { i: 0, q: 'maj7' },
+      { i: 3, q: 'sus2' },
+      { i: 5, q: 'maj9' },
+      { i: 4, q: 'maj7' },
     ],
   },
   major: {
@@ -44,8 +44,8 @@ export const SCALES = {
     chords: [
       { i: 0, q: 'maj9' },
       { i: 3, q: 'maj7' },
-      { i: 1, q: 'm7' },
-      { i: 4, q: 'maj7' },
+      { i: 4, q: 'add9' },
+      { i: 1, q: 'sus2' },
     ],
   },
   dorian: {
@@ -53,10 +53,10 @@ export const SCALES = {
     strudel: 'dorian',
     steps: [0, 2, 3, 5, 7, 9, 10],
     chords: [
-      { i: 0, q: 'm7' },
-      { i: 3, q: 'maj7' },
-      { i: 5, q: 'maj7' },
-      { i: 1, q: 'm7' },
+      { i: 0, q: 'maj7' },
+      { i: 3, q: 'maj9' },
+      { i: 5, q: 'sus2' },
+      { i: 1, q: 'maj7' },
     ],
   },
   phrygian: {
@@ -135,11 +135,11 @@ export const PROGRESSIONS = {
 };
 
 export const MOTIFS = {
-  sparse: { label: 'Sparse', pattern: '~ 0 ~ 4 ~ ~ 2 ~' },
-  steps: { label: 'Steps', pattern: '0 2 3 5 ~ 3 2 0' },
-  call: { label: 'Call', pattern: '0 [2 4] ~ 7 ~ [5 2] 0 ~' },
-  wide: { label: 'Wide', pattern: '0 ~ 7 ~ 4 ~ 9 ~' },
-  pedal: { label: 'Pedal', pattern: '0 ~ 0 2 ~ 0 4 ~' },
+  sparse: { label: 'Sparse', pattern: '~ 0 ~ ~ 2 ~ ~ 4 ~' },
+  steps: { label: 'Steps', pattern: '~ 0 2 ~ 3 ~ 2 ~ 0 ~' },
+  call: { label: 'Call', pattern: '~ 0 ~ 2 ~ 4 ~ ~ 2 ~' },
+  wide: { label: 'Wide', pattern: '~ 0 ~ ~ 4 ~ ~ 2 ~' },
+  pedal: { label: 'Pedal', pattern: '~ 0 ~ 0 ~ 2 ~ 0 ~' },
 };
 
 export function clamp(n, min, max) {

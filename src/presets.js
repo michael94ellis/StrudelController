@@ -13,12 +13,12 @@ export const MOOD_IDS = ['sleep', 'meditation', 'focus', 'relax'];
 export const TRACK_LENGTHS = [30, 45, 60, 90, 120];
 
 export const GAIN_CAP = {
-  drone: 0.7,
-  pad: 0.55,
-  melody: 0.5,
-  shimmer: 0.28,
-  pulse: 0.4,
-  texture: 0.22,
+  drone: 0.38,
+  pad: 0.28,
+  melody: 0.26,
+  shimmer: 0.14,
+  pulse: 0.2,
+  texture: 0.12,
 };
 
 export const MOTIONS = [
@@ -47,25 +47,21 @@ export const LAYER_INFO = {
   },
   melody: {
     name: 'Piano',
-    hint: 'Felt piano, mostly rests',
+    hint: 'Soft keys, mostly rests',
     voices: [
-      { id: 'felt', label: 'Felt' },
-      { id: 'soft', label: 'Soft' },
-      { id: 'box', label: 'Music box' },
+      { id: 'felt', label: 'Soft' },
+      { id: 'soft', label: 'Gentle' },
     ],
   },
   shimmer: {
     name: 'Glow',
-    hint: 'A few high notes, very quiet',
+    hint: 'High synth sheen, very quiet',
     voices: [{ id: 'harmonic', label: 'Soft sine' }],
   },
   pulse: {
-    name: 'Harp',
-    hint: 'Sparse plucks, not a beat',
-    voices: [
-      { id: 'harp', label: 'Harp' },
-      { id: 'bowl', label: 'Bowl' },
-    ],
+    name: 'Hum',
+    hint: 'Slow mid-register hum',
+    voices: [{ id: 'hum', label: 'Hum' }],
   },
   texture: {
     name: 'Air',

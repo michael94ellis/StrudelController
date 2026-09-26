@@ -5,49 +5,49 @@ export const MOODS = [
   {
     id: 'sleep',
     name: 'Sleep',
-    blurb: 'Very quiet. Bed, pad, and air, with the piano visiting only once.',
-    bpm: [36, 44],
-    scales: ['minor', 'pentatonic', 'minorPentatonic'],
+    blurb: 'Warm hums and a distant piano. Nothing bright, nothing busy.',
+    bpm: [38, 44],
+    scales: ['pentatonic', 'major', 'lydian'],
     progressions: ['still', 'fifths'],
     motifs: ['sparse', 'pedal'],
     piano: 'rare',
-    harp: false,
+    hum: true,
     glow: false,
   },
   {
     id: 'meditation',
     name: 'Meditation',
-    blurb: 'A still room. Soft piano and a few harp notes, with lots of space.',
+    blurb: 'Soft piano over slow pads and a steady hum.',
     bpm: [40, 48],
-    scales: ['major', 'dorian', 'pentatonic', 'minor'],
+    scales: ['major', 'dorian', 'pentatonic'],
     progressions: ['still', 'sway', 'fifths'],
-    motifs: ['sparse', 'pedal', 'wide'],
+    motifs: ['sparse', 'pedal', 'steps'],
     piano: 'some',
-    harp: true,
+    hum: true,
     glow: true,
   },
   {
     id: 'focus',
     name: 'Focus',
-    blurb: 'Gentle motion that stays out of the way. Piano and pads, no surprises.',
-    bpm: [48, 60],
-    scales: ['major', 'lydian', 'pentatonic', 'dorian'],
-    progressions: ['sway', 'fifths'],
+    blurb: 'Clear piano and gentle synth. Calm, not gloomy.',
+    bpm: [46, 56],
+    scales: ['major', 'lydian', 'pentatonic'],
+    progressions: ['sway', 'fifths', 'still'],
     motifs: ['sparse', 'pedal'],
     piano: 'steady',
-    harp: false,
+    hum: false,
     glow: true,
   },
   {
     id: 'relax',
     name: 'Relax',
-    blurb: 'Warm pads, a quiet piano, and air. Easy to leave running.',
-    bpm: [42, 54],
-    scales: ['major', 'minor', 'dorian', 'pentatonic', 'minorPentatonic'],
+    blurb: 'Soothing chords, soft keys, and a breathing hum.',
+    bpm: [42, 52],
+    scales: ['major', 'dorian', 'pentatonic', 'lydian'],
     progressions: ['sway', 'fifths', 'still'],
-    motifs: ['sparse', 'pedal', 'wide'],
+    motifs: ['sparse', 'pedal', 'steps'],
     piano: 'some',
-    harp: true,
+    hum: true,
     glow: true,
   },
 ];
@@ -59,13 +59,6 @@ export const LENGTHS = [
   { seconds: 90, label: '1:30' },
   { seconds: 120, label: '2:00' },
 ];
-
-const TITLES = {
-  sleep: ['Night Ferry', 'Low Lamp', 'Snow Room', 'Quiet Harbor', 'Slow Tide', 'Dim Hall'],
-  meditation: ['Still Water', 'Open Hands', 'Empty Chair', 'Soft Bell', 'Inner Room', 'Unmoved'],
-  focus: ['North Light', 'Paper Window', 'Second Hour', 'Clear Desk', 'Even Pace', 'Gentle Task'],
-  relax: ['Late Afternoon', 'Warm Glass', 'Garden Wall', 'Unhurried', 'Shade Tree', 'Loose Shoulders'],
-};
 
 const ROOTS = ['C', 'D', 'Eb', 'F', 'G', 'A', 'Bb'];
 
@@ -112,13 +105,13 @@ function splitBars(total) {
 function bed(random) {
   return {
     enabled: true,
-    voice: random() < 0.5 ? 'pure' : 'warm',
+    voice: 'pure',
     motion: 'breathe',
-    gain: between(random, 0.42, 0.55),
-    lpf: Math.round(between(random, 160, 280)),
-    room: between(random, 0.72, 0.88),
-    delay: between(random, 0, 0.08),
-    release: between(random, 5, 7),
+    gain: between(random, 0.22, 0.32),
+    lpf: Math.round(between(random, 140, 240)),
+    room: between(random, 0.76, 0.9),
+    delay: between(random, 0, 0.06),
+    release: between(random, 6, 8),
     slow: 8,
     sparsity: 0,
   };
@@ -127,13 +120,13 @@ function bed(random) {
 function pad(random) {
   return {
     enabled: true,
-    voice: random() < 0.75 ? 'warm' : 'choir',
+    voice: random() < 0.7 ? 'haze' : 'warm',
     motion: 'breathe',
-    gain: between(random, 0.3, 0.42),
-    lpf: Math.round(between(random, 480, 900)),
-    room: between(random, 0.74, 0.9),
-    delay: between(random, 0.08, 0.2),
-    release: between(random, 4, 6),
+    gain: between(random, 0.14, 0.22),
+    lpf: Math.round(between(random, 520, 980)),
+    room: between(random, 0.78, 0.92),
+    delay: between(random, 0.1, 0.2),
+    release: between(random, 5, 7),
     slow: random() < 0.5 ? 2 : 3,
     sparsity: 0,
   };
@@ -142,45 +135,45 @@ function pad(random) {
 function piano(random, mood) {
   return {
     enabled: true,
-    voice: mood.id === 'focus' && random() < 0.25 ? 'soft' : 'felt',
+    voice: 'felt',
     motion: 'still',
-    gain: between(random, mood.piano === 'steady' ? 0.3 : 0.24, 0.4),
-    lpf: Math.round(between(random, 900, 1600)),
-    room: between(random, 0.55, 0.75),
-    delay: between(random, 0.12, 0.26),
-    release: between(random, 2, 3.2),
+    gain: between(random, mood.piano === 'steady' ? 0.18 : 0.14, mood.piano === 'steady' ? 0.24 : 0.2),
+    lpf: Math.round(between(random, 1100, 1800)),
+    room: between(random, 0.58, 0.72),
+    delay: between(random, 0.14, 0.24),
+    release: between(random, 2.4, 3.6),
     slow: mood.piano === 'steady' ? 2 : 3,
-    sparsity: between(random, mood.piano === 'steady' ? 0.38 : 0.5, mood.piano === 'steady' ? 0.55 : 0.72),
+    sparsity: between(random, mood.piano === 'steady' ? 0.45 : 0.55, mood.piano === 'steady' ? 0.62 : 0.78),
   };
 }
 
 function air(random) {
   return {
     enabled: true,
-    voice: random() < 0.6 ? 'air' : 'mist',
-    motion: random() < 0.5 ? 'breathe' : 'drift',
-    gain: between(random, 0.08, 0.14),
-    lpf: Math.round(between(random, 1600, 2600)),
-    room: between(random, 0.8, 0.92),
-    delay: between(random, 0, 0.08),
-    release: between(random, 2, 3),
-    slow: 2,
-    sparsity: between(random, 0.1, 0.3),
+    voice: 'air',
+    motion: random() < 0.6 ? 'breathe' : 'still',
+    gain: between(random, 0.04, 0.08),
+    lpf: Math.round(between(random, 380, 620)),
+    room: between(random, 0.82, 0.94),
+    delay: between(random, 0, 0.06),
+    release: between(random, 4, 6),
+    slow: 4,
+    sparsity: 0,
   };
 }
 
-function harp(random) {
+function hum(random) {
   return {
     enabled: true,
-    voice: random() < 0.6 ? 'harp' : 'bowl',
-    motion: 'still',
-    gain: between(random, 0.16, 0.26),
-    lpf: Math.round(between(random, 1200, 2000)),
-    room: between(random, 0.65, 0.82),
-    delay: between(random, 0.1, 0.22),
-    release: between(random, 1.8, 2.8),
-    slow: 4,
-    sparsity: between(random, 0.35, 0.55),
+    voice: 'hum',
+    motion: 'breathe',
+    gain: between(random, 0.1, 0.16),
+    lpf: Math.round(between(random, 320, 520)),
+    room: between(random, 0.72, 0.86),
+    delay: between(random, 0.06, 0.14),
+    release: between(random, 5, 7),
+    slow: 8,
+    sparsity: 0,
   };
 }
 
@@ -188,45 +181,45 @@ function glow(random) {
   return {
     enabled: true,
     voice: 'harmonic',
-    motion: 'drift',
-    gain: between(random, 0.08, 0.14),
-    lpf: Math.round(between(random, 1800, 2800)),
-    room: between(random, 0.8, 0.92),
-    delay: between(random, 0.12, 0.24),
-    release: between(random, 2.6, 4),
+    motion: 'still',
+    gain: between(random, 0.05, 0.09),
+    lpf: Math.round(between(random, 1400, 2200)),
+    room: between(random, 0.82, 0.92),
+    delay: between(random, 0.12, 0.22),
+    release: between(random, 3, 4.5),
     slow: 4,
-    sparsity: between(random, 0.4, 0.6),
+    sparsity: between(random, 0.55, 0.72),
   };
 }
 
-export function generateTrack(moodId = 'relax', seconds = 60, random = Math.random) {
+export function generateTrack(moodId = 'relax', seconds = 60, random = Math.random, profile = {}) {
   const mood = moodById(moodId);
-  const bpm = Math.round(between(random, mood.bpm[0], mood.bpm[1]));
+  const bpm = Math.round(profile.bpm ?? between(random, mood.bpm[0], mood.bpm[1]));
   const total = fitBars(seconds, bpm);
   const [arriveBars, openBars, settleBars, returnBars] = splitBars(total);
-  const arriveLevel = between(random, 0.9, 1);
-  const arriveSpace = between(random, 0.1, 0.16);
+  const arriveLevel = between(random, 0.82, 0.92);
+  const arriveSpace = between(random, 0.12, 0.18);
   const pianoOn = { drone: true, pad: true, melody: true, texture: true };
   const openLayers =
     mood.piano === 'rare'
-      ? { drone: true, pad: true, texture: true }
-      : { ...pianoOn };
+      ? { drone: true, pad: true, texture: true, pulse: mood.hum }
+      : { ...pianoOn, pulse: mood.hum };
   const settleLayers = {
     pad: true,
-    melody: true,
+    melody: mood.piano !== 'rare',
     texture: true,
     shimmer: mood.glow,
-    pulse: mood.harp,
+    pulse: mood.hum,
   };
 
   const piece = createPiece({
-    title: pick(random, TITLES[mood.id]),
+    title: profile.title ?? 'Untitled',
     bpm,
-    root: pick(random, ROOTS),
-    scale: pick(random, mood.scales),
-    progression: pick(random, mood.progressions),
-    motif: pick(random, mood.motifs),
-    master: 1,
+    root: profile.root ?? pick(random, ROOTS),
+    scale: profile.scale ?? pick(random, mood.scales),
+    progression: profile.progression ?? pick(random, mood.progressions),
+    motif: profile.motif ?? pick(random, mood.motifs),
+    master: profile.master ?? 0.82,
     mood: mood.id,
     targetSeconds: LENGTHS.some((item) => item.seconds === Number(seconds)) ? Number(seconds) : 60,
     view: 'track',
@@ -235,20 +228,22 @@ export function generateTrack(moodId = 'relax', seconds = 60, random = Math.rand
       pad: pad(random),
       melody: piano(random, mood),
       shimmer: glow(random),
-      pulse: harp(random),
+      pulse: hum(random),
       texture: air(random),
     },
     sections: [
-      { name: 'Arrive', cycles: arriveBars, level: arriveLevel, space: arriveSpace, layers: { drone: true, texture: true } },
-      { name: 'Open', cycles: openBars, level: 1, space: between(random, 0.06, 0.12), layers: openLayers },
-      { name: 'Settle', cycles: settleBars, level: 1, space: between(random, 0.08, 0.14), layers: settleLayers },
-      { name: 'Return', cycles: returnBars, level: arriveLevel, space: arriveSpace, layers: { drone: true, texture: true } },
+      { name: 'Arrive', cycles: arriveBars, level: arriveLevel, space: arriveSpace, layers: { drone: true, texture: true, pulse: mood.hum } },
+      { name: 'Open', cycles: openBars, level: 0.92, space: between(random, 0.08, 0.14), layers: openLayers },
+      { name: 'Settle', cycles: settleBars, level: 0.88, space: between(random, 0.1, 0.16), layers: settleLayers },
+      { name: 'Return', cycles: returnBars, level: arriveLevel, space: arriveSpace, layers: { drone: true, texture: true, pulse: mood.hum } },
     ],
   });
 
   for (const id of LAYER_IDS) {
     piece.layers[id].enabled = piece.sections.some((section) => section.layers[id]);
   }
+  if (!mood.glow) piece.layers.shimmer.enabled = false;
+  if (!mood.hum) piece.layers.pulse.enabled = false;
   return piece;
 }
 

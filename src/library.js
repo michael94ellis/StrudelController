@@ -24,7 +24,7 @@ export function createLibrary(root) {
       <main class="library">
         <header class="library-head">
           <p class="mark">Strudel Controller</p>
-          <p class="tag">Ten soft ambient songs. Tap one, then leave it looping.</p>
+          <p class="tag">Soft piano, warm synth, and hums — no beats or bright chirps.</p>
           <div class="filters" role="tablist">
             ${MOODS.map(
               ([id, label]) =>

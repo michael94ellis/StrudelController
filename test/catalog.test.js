@@ -3,7 +3,7 @@ import test from 'node:test';
 import { buildCatalog } from '../src/catalog.js';
 import { compile } from '../src/codegen.js';
 
-const HARSH = /s\("(sawtooth|square|brown|crackle)"\)/;
+const HARSH = /s\("(sawtooth|square|brown|crackle|pink)"\)|\.fm\(/;
 
 test('the library is ten named ambient songs', () => {
   const tracks = buildCatalog();

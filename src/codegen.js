@@ -19,7 +19,7 @@ const CODE_NAME = {
   pad: 'pad',
   melody: 'piano',
   shimmer: 'glow',
-  pulse: 'harp',
+  pulse: 'hum',
   texture: 'air',
 };
 
@@ -30,7 +30,7 @@ const RESERVED = new Set([
   'pad',
   'piano',
   'glow',
-  'harp',
+  'hum',
   'air',
   'silence',
   'setcpm',
@@ -134,20 +134,20 @@ function toneCenter(id, layer) {
 
 function sourceSteps(id, layer) {
   const voice = layer.voice;
-  if (id === 'drone' && voice === 'warm') return ['s("triangle")'];
   if (id === 'drone') return ['s("sine")'];
 
-  if (id === 'pad' && voice === 'haze') return ['s("sine")'];
-  if (id === 'pad') return ['s("triangle")'];
+  if (id === 'pad') return ['s("sine")', 'partials([1, 0.35, 0.12, 0.04])'];
 
-  if (id === 'melody' && voice === 'soft') return ['s("triangle")'];
-  if (id === 'melody' && voice === 'felt') return ['s("sine")', 'fm(0.3)', 'fmh(1)'];
-  if (id === 'melody') return ['s("sine")'];
+  if (id === 'melody') {
+    if (voice === 'soft') return ['s("sine")', 'partials([1, 0.28, 0.1, 0.03])'];
+    return ['s("sine")', 'partials([1, 0.2, 0.08, 0.02])'];
+  }
 
-  if (id === 'shimmer') return ['s("sine")', 'fm(0.25)', 'fmh(1)'];
+  if (id === 'shimmer') return ['s("sine")', 'partials([1, 0.15, 0.05])'];
 
-  if (id === 'pulse' && voice === 'harp') return ['s("triangle")'];
-  if (id === 'pulse') return ['s("sine")'];
+  if (id === 'pulse') return ['s("sine")', 'partials([1, 0.4, 0.15])'];
+
+  if (id === 'texture') return ['s("sine")', 'partials([1, 0.25, 0.08])'];
 
   return [];
 }
@@ -155,13 +155,13 @@ function sourceSteps(id, layer) {
 function envelope(id, layer) {
   const release = clamp(Number(layer.release) || 2, 0.05, 12);
   if (id === 'pulse') {
-    return ['attack(0.02)', 'decay(1.2)', 'sustain(0)', `release(${Math.min(release, 3).toFixed(2)})`];
+    return ['attack(2.4)', 'decay(0.6)', 'sustain(0.85)', `release(${Math.max(release, 4).toFixed(2)})`, 'legato(2.2)'];
   }
   if (id === 'texture') {
-    return ['attack(0.4)', 'decay(1)', 'sustain(0)', `release(${release.toFixed(2)})`];
+    return ['attack(2)', 'decay(0.5)', 'sustain(0.75)', `release(${Math.max(release, 5).toFixed(2)})`, 'legato(2.5)'];
   }
   if (id === 'melody') {
-    return ['attack(0.02)', 'decay(1.5)', 'sustain(0.08)', `release(${Math.min(release, 3.4).toFixed(2)})`];
+    return ['attack(0.12)', 'decay(1.8)', 'sustain(0.12)', `release(${Math.min(release, 4).toFixed(2)})`];
   }
   if (id === 'shimmer') {
     return ['attack(0.5)', 'decay(0.9)', 'sustain(0.2)', `release(${release.toFixed(2)})`, 'legato(1.4)'];
@@ -197,8 +197,7 @@ function spaceOnInstrument(id, layer) {
   }
   const sparsity = Number(layer.sparsity) || 0;
   if (sparsity > 0.03) steps.push(`degradeBy(${sparsity.toFixed(2)})`);
-  if (id === 'shimmer') steps.push('late(0.5)');
-  if (id === 'pulse') steps.push('late(0.25)');
+  if (id === 'shimmer') steps.push('late(0.35)');
   const pace = integer(layer.slow, 2, 1, 16);
   if (pace !== 1) steps.push(`slow(${pace})`);
   return steps;
@@ -245,34 +244,37 @@ function instrument(id, state) {
   }
 
   if (id === 'shimmer') {
-    const body = expr(`n("~ 4 ~ ~ 7 ~ 2 ~").scale("${scaleName(state, 5)}")`, [
+    const body = expr(`n("~ 2 ~ ~ 4 ~ ~ 0 ~").scale("${scaleName(state, 4)}")`, [
       ...sourceSteps(id, layer),
       ...envelope(id, layer),
       ...colorSteps(id, layer),
       ...spaceOnInstrument(id, layer),
     ]);
-    return `// A quiet glow, half a cycle late.\nconst ${name} = ${body}`;
+    return `// High synth glow, very gentle.\nconst ${name} = ${body}`;
   }
 
   if (id === 'pulse') {
-    const body = expr(`n("~ 0 ~ ~ 4 ~ 7 ~").scale("${scaleName(state, 5)}")`, [
+    const humNotes = `[${miniNote(root, 0, 3, state.scale)},${miniNote(root, 4, 3, state.scale)}]`;
+    const body = expr(`note("${humNotes}")`, [
       ...sourceSteps(id, layer),
       ...envelope(id, layer),
       ...colorSteps(id, layer),
       ...spaceOnInstrument(id, layer),
     ]);
-    return `// A few soft plucks, high and far apart.\nconst ${name} = ${body}`;
+    return `// A slow mid-register hum under the piano.\nconst ${name} = ${body}`;
   }
 
-  const gust =
-    layer.motion === 'drift' ? '<x ~ ~ x ~ ~>' : layer.motion === 'breathe' ? '<x ~ x ~>' : '<x>';
-  const body = expr('s("pink")', [
-    `struct("${gust}")`,
+  const wash =
+    layer.motion === 'drift'
+      ? `[${miniNote(root, 0, 2, state.scale)},${miniNote(root, 7, 2, state.scale)},${miniNote(root, 4, 2, state.scale)}]`
+      : `[${miniNote(root, 0, 2, state.scale)},${miniNote(root, 7, 2, state.scale)}]`;
+  const body = expr(`note("${wash}")`, [
+    ...sourceSteps(id, layer),
     ...envelope(id, layer),
     ...colorSteps(id, layer),
     ...spaceOnInstrument(id, layer),
   ]);
-  return `// Barely-there air.\nconst ${name} = ${body}`;
+  return `// Soft synth air — no noise.\nconst ${name} = ${body}`;
 }
 
 function gainCall(id, layer, level) {

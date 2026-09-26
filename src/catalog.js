@@ -1,18 +1,18 @@
 import { generateTrack } from './generate.js';
 import { formatTime, trackSeconds } from './theory.js';
 
-/** Ten fixed ambient pieces — one row each, distinct seeds. */
+/** Ten fixed ambient pieces — each with its own harmony and palette. */
 const TRACKS = [
-  ['night-ferry', 'Night Ferry', 'sleep', 90],
-  ['still-water', 'Still Water', 'meditation', 90],
-  ['north-light', 'North Light', 'focus', 60],
-  ['late-afternoon', 'Late Afternoon', 'relax', 90],
-  ['snow-room', 'Snow Room', 'sleep', 120],
-  ['soft-bell', 'Soft Bell', 'meditation', 45],
-  ['even-pace', 'Even Pace', 'focus', 60],
-  ['warm-glass', 'Warm Glass', 'relax', 60],
-  ['slow-tide', 'Slow Tide', 'sleep', 90],
-  ['candle-hour', 'Candle Hour', 'meditation', 120],
+  ['night-ferry', 'Night Ferry', 'sleep', 90, { root: 'G', scale: 'pentatonic', progression: 'still', motif: 'sparse' }],
+  ['still-water', 'Still Water', 'meditation', 90, { root: 'C', scale: 'major', progression: 'sway', motif: 'pedal' }],
+  ['north-light', 'North Light', 'focus', 60, { root: 'F', scale: 'lydian', progression: 'fifths', motif: 'sparse', bpm: 52 }],
+  ['late-afternoon', 'Late Afternoon', 'relax', 90, { root: 'A', scale: 'major', progression: 'sway', motif: 'steps' }],
+  ['snow-room', 'Snow Room', 'sleep', 120, { root: 'Eb', scale: 'major', progression: 'fifths', motif: 'pedal' }],
+  ['soft-bell', 'Soft Keys', 'meditation', 45, { root: 'D', scale: 'pentatonic', progression: 'still', motif: 'sparse' }],
+  ['even-pace', 'Even Pace', 'focus', 60, { root: 'Bb', scale: 'pentatonic', progression: 'still', motif: 'pedal', bpm: 50 }],
+  ['warm-glass', 'Warm Glass', 'relax', 60, { root: 'F', scale: 'dorian', progression: 'fifths', motif: 'sparse' }],
+  ['slow-tide', 'Slow Tide', 'sleep', 90, { root: 'C', scale: 'lydian', progression: 'fifths', motif: 'sparse' }],
+  ['candle-hour', 'Candle Hour', 'meditation', 120, { root: 'G', scale: 'major', progression: 'sway', motif: 'steps' }],
 ];
 
 const MOOD_NAME = {
@@ -33,8 +33,8 @@ function mulberry32(seed) {
 }
 
 export function buildCatalog() {
-  return TRACKS.map(([id, title, mood, seconds], index) => {
-    const piece = generateTrack(mood, seconds, mulberry32(800 + index * 97));
+  return TRACKS.map(([id, title, mood, seconds, profile], index) => {
+    const piece = generateTrack(mood, seconds, mulberry32(800 + index * 97), { ...profile, title });
     piece.title = title;
     piece.mood = mood;
     const duration = trackSeconds(piece);

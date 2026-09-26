@@ -14,7 +14,7 @@ function mulberry32(seed) {
   };
 }
 
-const HARSH = /s\("(sawtooth|square|brown|crackle)"\)/;
+const HARSH = /s\("(sawtooth|square|brown|crackle|pink)"\)|\.fm\(/;
 
 test('spells fifths into the right octave', () => {
   assert.equal(miniNote('B', 7, 2), 'f#3');
@@ -25,10 +25,10 @@ test('spells fifths into the right octave', () => {
 
 test('minor cycle spells a pedal-friendly progression', () => {
   assert.deepEqual(chordSymbols({ root: 'C', scale: 'minor', progression: 'cycle' }), [
-    'Cm9',
-    'Fm7',
-    'Abmaj7',
-    'Ebmaj7',
+    'Cmaj7',
+    'Fsus2',
+    'Abmaj9',
+    'Gmaj7',
   ]);
 });
 
@@ -51,9 +51,9 @@ test('every mood and length is a short looping track', () => {
         assert.equal(ret.layers.melody, false);
         assert.equal(arrive.layers.drone, true);
         assert.equal(ret.layers.drone, true);
-        if (mood.id === 'sleep') {
-          assert.equal(piece.sections.some((section) => section.layers.pulse), false);
-        }
+        if (mood.hum) assert.match(code, /const hum = /);
+        assert.equal(code.includes('const harp'), false);
+        assert.equal(code.includes('s("pink")'), false);
       }
     }
   }
